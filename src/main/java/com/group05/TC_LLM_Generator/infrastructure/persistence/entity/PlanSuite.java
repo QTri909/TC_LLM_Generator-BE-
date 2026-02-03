@@ -28,8 +28,8 @@ public class PlanSuite {
     private UUID planSuiteId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "test_execution_plan_id", referencedColumnName = "test_execution_plan_id", nullable = false)
-    private TestExecutionPlan testExecutionPlan;
+    @JoinColumn(name = "test_plan_id", referencedColumnName = "test_plan_id", nullable = false)
+    private TestPlan testPlan;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_suite_id", referencedColumnName = "test_suite_id", nullable = false)

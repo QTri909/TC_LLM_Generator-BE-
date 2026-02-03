@@ -11,21 +11,21 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * JPA Entity for test_execution_plans table
+ * JPA Entity for test_plans table
  */
 @Entity
-@Table(name = "test_execution_plans")
+@Table(name = "test_plans")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TestExecutionPlan {
+public class TestPlan {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "test_execution_plan_id", nullable = false)
-    private UUID testExecutionPlanId;
+    @Column(name = "test_plan_id", nullable = false)
+    private UUID testPlanId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", referencedColumnName = "project_id", nullable = false)
