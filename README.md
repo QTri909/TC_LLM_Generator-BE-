@@ -26,21 +26,7 @@ Backend REST API built with Clean Architecture and Richardson Maturity Model Lev
 
 # Setup and Run
 
-## Step 1: Database Setup
-
-### Start PostgreSQL
-```bash
-sudo service postgresql start
-```
-
-### Create database and user
-```sql
-CREATE DATABASE tc_llm_generator;
-CREATE USER tc_user WITH PASSWORD 'tc_password123';
-GRANT ALL PRIVILEGES ON DATABASE tc_llm_generator TO tc_user;
-```
-
-## Step 2: Setup Git Hooks with Husky
+## Step 1: Setup Git Hooks with Husky
 
 This project uses Husky to enforce commit message conventions and code quality standards.
 
@@ -48,12 +34,19 @@ This project uses Husky to enforce commit message conventions and code quality s
 
 After cloning the repository, run the following command to set up Git hooks:
 
+#### All commands line must run in root folder project.
+
 ```bash
 # Install dependencies (if using npm-based Husky)
 npm install
 
-# Or if Husky is configured with Maven, hooks are installed automatically during build
-./mvnw clean install
+# Check if husky existed or not
+which husky #on MacOS and Linux
+
+where husky #on Window
+
+# install husky to project
+husky install 
 ```
 
 ### What Husky Does
