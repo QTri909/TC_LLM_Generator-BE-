@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17.6
+    container_name: postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: testcase_llm_generator
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_vol:/var/lib/postgresql/data
+    networks:
+      - testcase_llm_generator_net
+
+volumes:
+  pgdata_vol:
+networks:
+  testcase_llm_generator_net:
