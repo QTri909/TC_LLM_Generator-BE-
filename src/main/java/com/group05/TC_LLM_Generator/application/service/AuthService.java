@@ -8,6 +8,10 @@ import com.group05.TC_LLM_Generator.domain.model.entity.User;
 import com.group05.TC_LLM_Generator.domain.repository.UserRepo;
 import com.group05.TC_LLM_Generator.infrastructure.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,9 +42,12 @@ public class AuthService implements LoginUseCase {
                     return userRepo.save(newUser);
                 });
 
+        Map<String, String> data = new HashMap<>();
+        data.put("email", user.getEmail());
+        data.put("name", user.getName());
         // 3. Generate Tokens
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getEmail());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(data);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(data);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
