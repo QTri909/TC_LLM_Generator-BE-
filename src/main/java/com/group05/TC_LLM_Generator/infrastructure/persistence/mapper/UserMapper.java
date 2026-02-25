@@ -2,34 +2,24 @@ package com.group05.TC_LLM_Generator.infrastructure.persistence.mapper;
 
 import com.group05.TC_LLM_Generator.domain.model.entity.User;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class UserMapper {
+@Mapper(componentModel = "spring")
+public interface UserMapper {
 
-    public User toDomain(UserEntity entity) {
-        if (entity == null)
-            return null;
-        return User.builder()
-                .id(entity.getUserId())
-                .email(entity.getEmail())
-                .name(entity.getFullName())
-                .password(entity.getPasswordHash())
-                .provider(entity.getAuthProvider())
-                .status(entity.getStatus())
-                .build();
-    }
+    @Mapping(target = "id", source = "userId")
+    @Mapping(target = "name", source = "fullName")
+    @Mapping(target = "password", source = "passwordHash")
+    @Mapping(target = "provider", source = "authProvider")
+    User toDomain(UserEntity entity);
 
-    public UserEntity toEntity(User domain) {
-        if (domain == null)
-            return null;
-        return UserEntity.builder()
-                .userId(domain.getId())
-                .email(domain.getEmail())
-                .fullName(domain.getName())
-                .passwordHash(domain.getPassword())
-                .authProvider(domain.getProvider())
-                .status(domain.getStatus())
-                .build();
-    }
+    @Mapping(target = "userId", source = "id")
+    @Mapping(target = "fullName", source = "name")
+    @Mapping(target = "passwordHash", source = "password")
+    @Mapping(target = "authProvider", source = "provider")
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "lastActiveWorkspaceId", ignore = true)
+    UserEntity toEntity(User domain);
 }

@@ -2,9 +2,9 @@ package com.group05.TC_LLM_Generator.infrastructure.persistence.repository;
 
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -19,8 +19,15 @@ public interface WorkspaceRepository extends JpaRepository<Workspace, UUID> {
      * @param ownerUserId owner user ID
      * @return List of workspaces
      */
-    @EntityGraph(attributePaths = { "projects", "projects.members" })
     List<Workspace> findByOwnerUser_UserId(UUID ownerUserId);
+
+    /**
+     * Find first workspace by owner user ID
+     * 
+     * @param ownerUserId owner user ID
+     * @return Optional of workspace
+     */
+    Optional<Workspace> findFirstByOwnerUser_UserId(UUID ownerUserId);
 
     /**
      * Find workspace by name

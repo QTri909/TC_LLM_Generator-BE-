@@ -31,9 +31,9 @@ public class BusinessRule {
     @JoinColumn(name = "project_id", referencedColumnName = "project_id", nullable = false)
     private Project project;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_story_id", referencedColumnName = "user_story_id")
-    private UserStory userStory;
+    // @ManyToOne(fetch = FetchType.LAZY)
+    // @JoinColumn(name = "user_story_id", referencedColumnName = "user_story_id")
+    // private UserStory userStory;
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
@@ -44,7 +44,7 @@ public class BusinessRule {
     @Column(name = "priority", nullable = false)
     private Integer priority;
 
-    @Column(name = "source", length = 100)
+    @Column(name = "source", length = 100, nullable = true)
     private String source;
 
     @Column(name = "created_at", nullable = false)

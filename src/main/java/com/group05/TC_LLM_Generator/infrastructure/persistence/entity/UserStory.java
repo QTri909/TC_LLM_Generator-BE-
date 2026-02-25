@@ -31,10 +31,10 @@ public class UserStory {
     @JoinColumn(name = "project_id", referencedColumnName = "project_id", nullable = false)
     private Project project;
 
-    @Column(name = "jira_issue_key", length = 50)
+    @Column(name = "jira_issue_key", length = 50, nullable = true)
     private String jiraIssueKey;
 
-    @Column(name = "jira_issue_id", length = 50)
+    @Column(name = "jira_issue_id", length = 50, nullable = true)
     private String jiraIssueId;
 
     @Column(name = "title", nullable = false, length = 500)

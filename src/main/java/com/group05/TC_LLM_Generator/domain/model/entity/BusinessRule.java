@@ -12,17 +12,11 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Project {
+public class BusinessRule {
     private UUID id;
-    private UUID workspaceId;
-    private UUID createdByUserId;
-    private String projectKey;
-    private String name;
+    private String title;
     private String description;
-    private String jiraSiteId;
-    private String jiraProjectKey;
-    private String status;
+    private Integer priority;
+    private String source;
     private Instant createdAt;
-    private Instant updatedAt;
-    private java.util.List<ProjectMember> members;
 }

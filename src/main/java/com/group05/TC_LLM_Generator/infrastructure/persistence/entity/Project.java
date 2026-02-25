@@ -4,17 +4,18 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
  * JPA Entity for projects table
  */
 @Entity
-@Table(name = "projects")
+@Table(name = "projects", uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "project_key", "workspace_id" })
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -35,7 +36,7 @@ public class Project {
     @JoinColumn(name = "created_by_user_id", referencedColumnName = "user_id", nullable = false)
     private UserEntity createdByUser;
 
-    @Column(name = "project_key", nullable = false, unique = true, length = 20)
+    @Column(name = "project_key", nullable = false, length = 20)
     private String projectKey;
 
     @Column(name = "name", nullable = false, length = 255)
@@ -44,10 +45,10 @@ public class Project {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "jira_site_id", length = 100)
+    @Column(name = "jira_site_id", length = 100, nullable = true)
     private String jiraSiteId;
 
-    @Column(name = "jira_project_key", length = 50)
+    @Column(name = "jira_project_key", length = 50, nullable = true)
     private String jiraProjectKey;
 
     @Column(name = "status", nullable = false, length = 50)
@@ -61,7 +62,15 @@ public class Project {
     @UpdateTimestamp
     private Instant updatedAt;
 
-    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<ProjectMember> members;
 
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BusinessRule> businessRules;
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserStory> userStories;
+
+    @OneToMany(mappedBy = "project", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TestCaseTemplate> testCaseTemplates;
 }

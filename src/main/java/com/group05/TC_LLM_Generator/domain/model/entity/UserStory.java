@@ -12,10 +12,12 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProjectMember {
-    private UUID userId;
-    private String email;
-    private String displayName;
-    private String role;
-    private Instant joinedAt;
+public class UserStory {
+    private UUID id;
+    private String jiraIssueKey;
+    private String jiraIssueId;
+    private String title;
+    private String description;
+    private String status;
+    private Instant createdAt;
 }

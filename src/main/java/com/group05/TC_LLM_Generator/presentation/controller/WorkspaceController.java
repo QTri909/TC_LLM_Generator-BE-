@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,11 +20,12 @@ public class WorkspaceController {
     private final GetWorkspaceUseCase getWorkspaceUseCase;
 
     @GetMapping("/me")
-    public ResponseEntity<List<Workspace>> getMyWorkspace(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<Workspace> getMyWorkspace(@AuthenticationPrincipal Jwt jwt) {
         String userIdString = jwt.getSubject();
         UUID userId = UUID.fromString(userIdString);
 
-        List<Workspace> workspaces = getWorkspaceUseCase.execute(userId);
-        return ResponseEntity.ok(workspaces);
+        return getWorkspaceUseCase.execute(userId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

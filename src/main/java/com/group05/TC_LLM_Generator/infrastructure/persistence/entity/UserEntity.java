@@ -48,4 +48,7 @@ public class UserEntity {
     @UpdateTimestamp
     private Instant updatedAt;
 
+    @Column(name = "last_active_workspace_id")
+    private UUID lastActiveWorkspaceId;
+
 }

@@ -4,14 +4,14 @@ import com.group05.TC_LLM_Generator.domain.model.entity.Workspace;
 import com.group05.TC_LLM_Generator.domain.repository.WorkspaceRepo;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.mapper.WorkspaceMapper;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.repository.ProjectRepository;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.repository.UserRepository;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.repository.WorkspaceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -19,13 +19,25 @@ public class WorkspaceRepoAdapter implements WorkspaceRepo {
 
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
     private final WorkspaceMapper workspaceMapper;
 
     @Override
-    public List<Workspace> findAllByOwnerId(UUID ownerId) {
-        return workspaceRepository.findByOwnerUser_UserId(ownerId).stream()
-                .map(workspaceMapper::toDomain)
-                .collect(Collectors.toList());
+    public Optional<Workspace> findById(UUID id) {
+        return workspaceRepository.findById(id).map(workspace -> {
+            var projects = projectRepository.findByWorkspace_WorkspaceId(id);
+            workspace.setProjects(projects);
+            return workspaceMapper.toDomain(workspace);
+        });
+    }
+
+    @Override
+    public Optional<Workspace> findFirstByOwnerId(UUID ownerId) {
+        return workspaceRepository.findFirstByOwnerUser_UserId(ownerId).map(workspace -> {
+            var projects = projectRepository.findByWorkspace_WorkspaceId(workspace.getWorkspaceId());
+            workspace.setProjects(projects);
+            return workspaceMapper.toDomain(workspace);
+        });
     }
 
     @Override
