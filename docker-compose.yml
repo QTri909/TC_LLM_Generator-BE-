@@ -33,7 +33,9 @@ services:
     restart: unless-stopped
     # environment:
     #   SPRING_PROFILES_ACTIVE: docker
-    network_mode: host
+    #network_mode: host
+    ports:
+        - 8080:8080
     #depends_on:
     #  postgres:
     #    condition: service_healthy
