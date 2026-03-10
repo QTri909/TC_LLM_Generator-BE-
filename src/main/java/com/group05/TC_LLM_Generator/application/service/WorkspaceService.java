@@ -63,6 +63,10 @@ public class WorkspaceService {
         return workspaceRepository.findByOwnerUserId(ownerUserId, pageable);
     }
 
+    public boolean hasAnyWorkspace(UUID userId) {
+        return !workspaceRepository.findByOwnerUserId(userId).isEmpty();
+    }
+
     public Page<Workspace> getAccessibleWorkspaces(UUID userId, Pageable pageable) {
         return workspaceRepository.findAccessibleByUser(userId, pageable);
     }

@@ -9,9 +9,13 @@ import org.springframework.stereotype.Service;
 import com.group05.TC_LLM_Generator.application.port.in.authen.RegisterUseCase;
 import com.group05.TC_LLM_Generator.application.port.in.authen.dto.request.RegisterRequest;
 import com.group05.TC_LLM_Generator.application.port.in.authen.dto.result.AuthResponse;
+import com.group05.TC_LLM_Generator.application.service.UserService;
+import com.group05.TC_LLM_Generator.application.service.WorkspaceService;
 import com.group05.TC_LLM_Generator.domain.model.entity.User;
 import com.group05.TC_LLM_Generator.domain.repository.RefreshTokenRepo;
 import com.group05.TC_LLM_Generator.domain.repository.UserRepo;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
 import com.group05.TC_LLM_Generator.infrastructure.security.JwtTokenProvider;
 import com.nimbusds.jwt.JWTClaimsSet;
 
@@ -25,15 +29,15 @@ public class RegisterService implements RegisterUseCase {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepo refreshTokenRepo;
+    private final UserService userService;
+    private final WorkspaceService workspaceService;
 
     @Override
     public AuthResponse execute(RegisterRequest request) {
-        // 1. Check if user already exists
         if (userRepo.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email already exists");
         }
 
-        // 2. Create new User
         User newUser = User.builder()
                 .email(request.getEmail())
                 .name(request.getFullName())
@@ -43,7 +47,8 @@ public class RegisterService implements RegisterUseCase {
                 .build();
         User savedUser = userRepo.save(newUser);
 
-        // 3. Generate Tokens
+        createDefaultWorkspace(savedUser.getId(), savedUser.getName());
+
         Map<String, String> data = new HashMap<>();
         data.put("id", savedUser.getId().toString());
         data.put("email", savedUser.getEmail());
@@ -52,7 +57,6 @@ public class RegisterService implements RegisterUseCase {
         String accessToken = jwtTokenProvider.generateAccessToken(data);
         String refreshToken = jwtTokenProvider.generateRefreshToken(data);
 
-        // Store refresh token
         JWTClaimsSet refreshClaims = jwtTokenProvider.extractClaims(refreshToken);
         refreshTokenRepo.save(
                 refreshClaims.getJWTID(),
@@ -64,5 +68,17 @@ public class RegisterService implements RegisterUseCase {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    private void createDefaultWorkspace(java.util.UUID userId, String userName) {
+        UserEntity owner = userService.getUserById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found after registration"));
+
+        Workspace workspace = Workspace.builder()
+                .ownerUser(owner)
+                .name(userName + "'s Workspace")
+                .description("Default workspace")
+                .build();
+        workspaceService.createWorkspace(workspace);
     }
 }
