@@ -33,13 +33,10 @@ services:
     restart: unless-stopped
     # environment:
     #   SPRING_PROFILES_ACTIVE: docker
-    ports:
-      - "8080:8080"
+    network_mode: host
     #depends_on:
     #  postgres:
     #    condition: service_healthy
-    networks:
-      - testcase_llm_generator_net
 
 volumes:
   pgdata_vol:
