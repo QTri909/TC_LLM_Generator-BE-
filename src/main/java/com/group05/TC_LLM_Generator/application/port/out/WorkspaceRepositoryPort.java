@@ -31,4 +31,6 @@ public interface WorkspaceRepositoryPort {
     void deleteById(UUID workspaceId);
 
     boolean existsById(UUID workspaceId);
+
+    long count();
 }

@@ -90,4 +90,9 @@ public class TestCaseRepositoryAdapter implements TestCaseRepositoryPort {
     public boolean existsById(UUID testCaseId) {
         return jpaRepository.existsById(testCaseId);
     }
+
+    @Override
+    public long count() {
+        return jpaRepository.count();
+    }
 }

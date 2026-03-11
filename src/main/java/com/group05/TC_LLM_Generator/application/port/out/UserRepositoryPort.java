@@ -1,9 +1,11 @@
 package com.group05.TC_LLM_Generator.application.port.out;
 
+import com.group05.TC_LLM_Generator.domain.model.enums.Role;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,4 +41,12 @@ public interface UserRepositoryPort {
     long countByStatus(String status);
 
     Page<UserEntity> searchByNameOrEmail(String keyword, Pageable pageable);
+
+    // Admin overview
+    long countByRole(Role role);
+
+    List<UserEntity> findRecentUsers(int limit);
+
+    List<Object[]> countUsersGroupedByDay(Instant since);
 }
+

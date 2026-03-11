@@ -65,4 +65,9 @@ public class WorkspaceRepositoryAdapter implements WorkspaceRepositoryPort {
     public boolean existsById(UUID workspaceId) {
         return jpaRepository.existsById(workspaceId);
     }
+
+    @Override
+    public long count() {
+        return jpaRepository.count();
+    }
 }

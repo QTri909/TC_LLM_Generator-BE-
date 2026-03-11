@@ -41,4 +41,6 @@ public interface TestCaseRepositoryPort {
     void deleteById(UUID testCaseId);
 
     boolean existsById(UUID testCaseId);
+
+    long count();
 }

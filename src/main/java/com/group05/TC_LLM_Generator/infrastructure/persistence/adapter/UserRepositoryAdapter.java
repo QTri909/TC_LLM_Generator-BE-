@@ -1,6 +1,7 @@
 package com.group05.TC_LLM_Generator.infrastructure.persistence.adapter;
 
 import com.group05.TC_LLM_Generator.application.port.out.UserRepositoryPort;
+import com.group05.TC_LLM_Generator.domain.model.enums.Role;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -85,5 +87,20 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
     public Page<UserEntity> searchByNameOrEmail(String keyword, Pageable pageable) {
         return jpaRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
                 keyword, keyword, pageable);
+    }
+
+    @Override
+    public long countByRole(Role role) {
+        return jpaRepository.countByRole(role);
+    }
+
+    @Override
+    public List<UserEntity> findRecentUsers(int limit) {
+        return jpaRepository.findTop5ByOrderByCreatedAtDesc();
+    }
+
+    @Override
+    public List<Object[]> countUsersGroupedByDay(Instant since) {
+        return jpaRepository.countUsersGroupedByDay(since);
     }
 }
