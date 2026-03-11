@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group05.TC_LLM_Generator.application.port.in.authen.VerifySignupUseCase;
 import com.group05.TC_LLM_Generator.application.port.out.authen.RegistrationCachePort;
 import com.group05.TC_LLM_Generator.domain.model.entity.User;
+import com.group05.TC_LLM_Generator.domain.model.enums.Role;
 import com.group05.TC_LLM_Generator.domain.repository.UserRepo;
 import com.group05.TC_LLM_Generator.infrastructure.util.HashUtil;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class VerifySignupService implements VerifySignupUseCase {
                     .password(info.get("passwordHash"))
                     .provider("LOCAL")
                     .status("ACTIVE")
+                    .role(Role.USER)
                     .build();
             userRepo.save(newUser);
 
