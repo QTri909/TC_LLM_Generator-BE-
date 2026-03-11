@@ -10,6 +10,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -52,6 +53,9 @@ public class UserEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", length = 10)
     private Gender gender;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp

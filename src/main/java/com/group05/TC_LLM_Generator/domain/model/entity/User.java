@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
@@ -22,4 +23,5 @@ public class User {
     private String status;
     private Role role;
     private Gender gender;
+    private LocalDate dateOfBirth;
 }
