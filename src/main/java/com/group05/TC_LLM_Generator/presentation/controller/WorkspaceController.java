@@ -8,6 +8,7 @@ import com.group05.TC_LLM_Generator.presentation.assembler.WorkspaceModelAssembl
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateWorkspaceRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateWorkspaceRequest;
+import com.group05.TC_LLM_Generator.presentation.dto.response.WorkspaceEventDTO;
 import com.group05.TC_LLM_Generator.presentation.dto.response.WorkspaceResponse;
 import com.group05.TC_LLM_Generator.presentation.exception.ResourceNotFoundException;
 import com.group05.TC_LLM_Generator.presentation.mapper.WorkspacePresentationMapper;
@@ -21,6 +22,7 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +39,7 @@ public class WorkspaceController {
     private final WorkspacePresentationMapper mapper;
     private final WorkspaceModelAssembler assembler;
     private final PagedResourcesAssembler<Workspace> pagedResourcesAssembler;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping
     public ResponseEntity<ApiResponse<WorkspaceResponse>> createWorkspace(
@@ -55,6 +58,9 @@ public class WorkspaceController {
 
         Workspace savedWorkspace = workspaceService.createWorkspace(workspace);
         WorkspaceResponse response = assembler.toModel(savedWorkspace);
+
+        // Broadcast WebSocket event
+        broadcastEvent("CREATED", response, savedWorkspace.getWorkspaceId().toString(), currentUserId.toString());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -101,6 +107,9 @@ public class WorkspaceController {
         Workspace updatedWorkspace = workspaceService.updateWorkspace(id, existingWorkspace);
         WorkspaceResponse response = assembler.toModel(updatedWorkspace);
 
+        // Broadcast WebSocket event
+        broadcastEvent("UPDATED", response, id.toString(), currentUserId.toString());
+
         return ResponseEntity.ok(ApiResponse.success(response, "Workspace updated successfully"));
     }
 
@@ -119,7 +128,21 @@ public class WorkspaceController {
         }
 
         workspaceService.deleteWorkspace(id);
+
+        // Broadcast WebSocket event
+        broadcastEvent("DELETED", null, id.toString(), currentUserId.toString());
+
         return ResponseEntity.ok(ApiResponse.success("Workspace deleted successfully"));
+    }
+
+    private void broadcastEvent(String action, WorkspaceResponse workspace, String workspaceId, String performedBy) {
+        WorkspaceEventDTO event = WorkspaceEventDTO.builder()
+                .action(action)
+                .workspace(workspace)
+                .workspaceId(workspaceId)
+                .performedBy(performedBy)
+                .build();
+        messagingTemplate.convertAndSend("/topic/workspaces", event);
     }
 
     @GetMapping("/owner/{userId}")
