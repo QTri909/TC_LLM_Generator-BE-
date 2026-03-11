@@ -29,7 +29,7 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
         response.add(linkTo(methodOn(UserController.class).getUserById(entity.getUserId())).withSelfRel());
         response.add(linkTo(methodOn(UserController.class).updateUser(entity.getUserId(), null)).withRel("update"));
         response.add(linkTo(methodOn(UserController.class).deleteUser(entity.getUserId())).withRel("delete"));
-        response.add(linkTo(methodOn(UserController.class).getAllUsers(null)).withRel("users"));
+        response.add(linkTo(methodOn(UserController.class).getAllUsers(null, null)).withRel("users"));
 
         return response;
     }
@@ -38,7 +38,7 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
     public CollectionModel<UserResponse> toCollectionModel(Iterable<? extends UserEntity> entities) {
         CollectionModel<UserResponse> collectionModel = RepresentationModelAssembler.super.toCollectionModel(entities);
 
-        collectionModel.add(linkTo(methodOn(UserController.class).getAllUsers(null)).withSelfRel());
+        collectionModel.add(linkTo(methodOn(UserController.class).getAllUsers(null, null)).withSelfRel());
 
         return collectionModel;
     }

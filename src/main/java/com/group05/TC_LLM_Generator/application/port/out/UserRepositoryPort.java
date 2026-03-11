@@ -33,4 +33,10 @@ public interface UserRepositoryPort {
     boolean existsById(UUID userId);
 
     boolean existsByEmail(String email);
+
+    long count();
+
+    long countByStatus(String status);
+
+    Page<UserEntity> searchByNameOrEmail(String keyword, Pageable pageable);
 }

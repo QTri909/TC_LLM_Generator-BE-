@@ -20,6 +20,7 @@ public interface UserPresentationMapper {
     /**
      * Map UserEntity to UserResponse
      */
+    @Mapping(target = "role", expression = "java(entity.getRole() != null ? entity.getRole().name() : null)")
     UserResponse toResponse(UserEntity entity);
 
     /**

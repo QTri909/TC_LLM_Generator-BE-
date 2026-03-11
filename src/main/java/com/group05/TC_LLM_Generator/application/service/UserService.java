@@ -2,6 +2,7 @@ package com.group05.TC_LLM_Generator.application.service;
 
 import com.group05.TC_LLM_Generator.application.port.out.UserRepositoryPort;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
+import com.group05.TC_LLM_Generator.presentation.dto.response.UserStatsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -74,6 +75,28 @@ public class UserService {
      */
     public Page<UserEntity> getUsersByStatus(String status, Pageable pageable) {
         return userRepository.findByStatus(status, pageable);
+    }
+
+    /**
+     * Search users by name or email with pagination
+     */
+    public Page<UserEntity> searchUsers(String keyword, Pageable pageable) {
+        return userRepository.searchByNameOrEmail(keyword, pageable);
+    }
+
+    /**
+     * Get user statistics for admin dashboard
+     */
+    public UserStatsResponse getUserStats() {
+        long total = userRepository.count();
+        long active = userRepository.countByStatus("ACTIVE");
+        long suspended = userRepository.countByStatus("SUSPENDED");
+
+        return UserStatsResponse.builder()
+                .totalUsers(total)
+                .activeUsers(active)
+                .suspendedUsers(suspended)
+                .build();
     }
 
     /**

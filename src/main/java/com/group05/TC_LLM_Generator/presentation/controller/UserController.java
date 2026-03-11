@@ -7,6 +7,7 @@ import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateUserRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateUserRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.response.UserResponse;
+import com.group05.TC_LLM_Generator.presentation.dto.response.UserStatsResponse;
 import com.group05.TC_LLM_Generator.presentation.exception.ResourceNotFoundException;
 import com.group05.TC_LLM_Generator.presentation.mapper.UserPresentationMapper;
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -69,17 +71,35 @@ public class UserController {
     }
 
     /**
-     * Get all users with pagination
+     * Get all users with pagination and optional search
      * GET /api/v1/users?page=0&size=20&sort=createdAt,desc
+     * GET /api/v1/users?search=keyword&page=0&size=20
      */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedModel<UserResponse>>> getAllUsers(
+            @RequestParam(value = "search", required = false) String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<UserEntity> page = userService.getAllUsers(pageable);
+        Page<UserEntity> page;
+        if (search != null && !search.isBlank()) {
+            page = userService.searchUsers(search.trim(), pageable);
+        } else {
+            page = userService.getAllUsers(pageable);
+        }
         PagedModel<UserResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
 
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Users retrieved successfully"));
+    }
+
+    /**
+     * Get user statistics for admin dashboard
+     * GET /api/v1/users/stats
+     */
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserStatsResponse>> getUserStats() {
+        UserStatsResponse stats = userService.getUserStats();
+        return ResponseEntity.ok(ApiResponse.success(stats, "User statistics retrieved successfully"));
     }
 
     /**

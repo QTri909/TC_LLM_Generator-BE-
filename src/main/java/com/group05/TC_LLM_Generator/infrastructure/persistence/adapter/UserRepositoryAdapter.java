@@ -70,4 +70,20 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
     public boolean existsByEmail(String email) {
         return jpaRepository.existsByEmail(email);
     }
+
+    @Override
+    public long count() {
+        return jpaRepository.count();
+    }
+
+    @Override
+    public long countByStatus(String status) {
+        return jpaRepository.countByStatus(status);
+    }
+
+    @Override
+    public Page<UserEntity> searchByNameOrEmail(String keyword, Pageable pageable) {
+        return jpaRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                keyword, keyword, pageable);
+    }
 }
