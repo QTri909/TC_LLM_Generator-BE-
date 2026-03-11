@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.group05.TC_LLM_Generator.application.port.in.authen.VerifySignupUseCase;
 import com.group05.TC_LLM_Generator.application.port.out.authen.RegistrationCachePort;
 import com.group05.TC_LLM_Generator.domain.model.entity.User;
+import com.group05.TC_LLM_Generator.domain.model.enums.Gender;
 import com.group05.TC_LLM_Generator.domain.model.enums.Role;
 import com.group05.TC_LLM_Generator.domain.repository.UserRepo;
 import com.group05.TC_LLM_Generator.infrastructure.util.HashUtil;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
@@ -52,14 +54,22 @@ public class VerifySignupService implements VerifySignupUseCase {
             @SuppressWarnings("unchecked")
             Map<String, String> info = objectMapper.readValue(infoJson.get(), Map.class);
 
-            User newUser = User.builder()
+            User.UserBuilder userBuilder = User.builder()
                     .email(info.get("email"))
                     .name(info.get("fullName"))
                     .password(info.get("passwordHash"))
                     .provider("LOCAL")
                     .status("ACTIVE")
-                    .role(Role.USER)
-                    .build();
+                    .role(Role.USER);
+
+            if (info.containsKey("gender")) {
+                userBuilder.gender(Gender.valueOf(info.get("gender")));
+            }
+            if (info.containsKey("dateOfBirth")) {
+                userBuilder.dateOfBirth(LocalDate.parse(info.get("dateOfBirth")));
+            }
+
+            User newUser = userBuilder.build();
             userRepo.save(newUser);
 
             log.info("User account created successfully for email: {}", email);

@@ -127,6 +127,14 @@ public class UserService {
             existingUser.setPasswordHash(updatedUser.getPasswordHash());
         }
 
+        if (updatedUser.getGender() != null) {
+            existingUser.setGender(updatedUser.getGender());
+        }
+
+        if (updatedUser.getDateOfBirth() != null) {
+            existingUser.setDateOfBirth(updatedUser.getDateOfBirth());
+        }
+
         return userRepository.save(existingUser);
     }
 
