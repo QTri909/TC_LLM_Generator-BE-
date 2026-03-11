@@ -25,6 +25,7 @@ public class UserResponse extends RepresentationModel<UserResponse> {
     private String role;
     private String authProvider;
     private String gender;
+    private String dateOfBirth;
     private Instant createdAt;
     private Instant updatedAt;
 }
