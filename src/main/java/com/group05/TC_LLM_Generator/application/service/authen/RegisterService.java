@@ -13,6 +13,7 @@ import com.group05.TC_LLM_Generator.application.port.in.authen.dto.result.AuthRe
 import com.group05.TC_LLM_Generator.application.service.UserService;
 import com.group05.TC_LLM_Generator.application.service.WorkspaceService;
 import com.group05.TC_LLM_Generator.domain.model.entity.User;
+import com.group05.TC_LLM_Generator.domain.model.enums.Gender;
 import com.group05.TC_LLM_Generator.domain.model.enums.Role;
 import com.group05.TC_LLM_Generator.domain.repository.RefreshTokenRepo;
 import com.group05.TC_LLM_Generator.domain.repository.UserRepo;
@@ -20,6 +21,8 @@ import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
 import com.group05.TC_LLM_Generator.infrastructure.security.JwtTokenProvider;
 import com.nimbusds.jwt.JWTClaimsSet;
+
+import java.time.LocalDate;
 
 import lombok.RequiredArgsConstructor;
 
@@ -41,6 +44,32 @@ public class RegisterService implements RegisterUseCase {
             throw new RuntimeException("Email already exists");
         }
 
+        // Validate gender if provided
+        Gender gender = null;
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            try {
+                gender = Gender.valueOf(request.getGender());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid gender value. Must be MALE or FEMALE");
+            }
+        }
+
+        // Validate dateOfBirth if provided
+        LocalDate dateOfBirth = null;
+        if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
+            try {
+                dateOfBirth = LocalDate.parse(request.getDateOfBirth());
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid date of birth format. Use YYYY-MM-DD");
+            }
+            if (dateOfBirth.isAfter(LocalDate.now())) {
+                throw new RuntimeException("Date of birth cannot be in the future");
+            }
+            if (dateOfBirth.isAfter(LocalDate.now().minusYears(13))) {
+                throw new RuntimeException("You must be at least 13 years old to register");
+            }
+        }
+
         User newUser = User.builder()
                 .email(request.getEmail())
                 .name(request.getFullName())
@@ -48,6 +77,8 @@ public class RegisterService implements RegisterUseCase {
                 .provider("LOCAL")
                 .status("ACTIVE")
                 .role(Role.USER)
+                .gender(gender)
+                .dateOfBirth(dateOfBirth)
                 .build();
         User savedUser = userRepo.save(newUser);
 

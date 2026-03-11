@@ -14,7 +14,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.group05.TC_LLM_Generator.domain.model.enums.Gender;
+
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -59,6 +62,31 @@ public class SignupService implements SignupUseCase {
             throw new RuntimeException("Passwords do not match");
         }
 
+        // 3b. Validate gender if provided
+        if (request.getGender() != null && !request.getGender().isBlank()) {
+            try {
+                Gender.valueOf(request.getGender());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid gender value. Must be MALE or FEMALE");
+            }
+        }
+
+        // 3c. Validate dateOfBirth if provided
+        if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
+            LocalDate dob;
+            try {
+                dob = LocalDate.parse(request.getDateOfBirth());
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid date of birth format. Use YYYY-MM-DD");
+            }
+            if (dob.isAfter(LocalDate.now())) {
+                throw new RuntimeException("Date of birth cannot be in the future");
+            }
+            if (dob.isAfter(LocalDate.now().minusYears(13))) {
+                throw new RuntimeException("You must be at least 13 years old to sign up");
+            }
+        }
+
         // 4. Build user info JSON (with hashed password)
         String infoJson = buildInfoJson(request);
 
@@ -91,6 +119,12 @@ public class SignupService implements SignupUseCase {
             info.put("email", request.getEmail());
             info.put("fullName", request.getFullName());
             info.put("passwordHash", passwordEncoder.encode(request.getPassword()));
+            if (request.getGender() != null && !request.getGender().isBlank()) {
+                info.put("gender", request.getGender());
+            }
+            if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
+                info.put("dateOfBirth", request.getDateOfBirth());
+            }
             return objectMapper.writeValueAsString(info);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize registration info", e);
