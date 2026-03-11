@@ -4,19 +4,20 @@ import com.group05.TC_LLM_Generator.application.port.in.authen.LoginUseCase;
 import com.group05.TC_LLM_Generator.application.port.in.authen.LoginWithPasswordUseCase;
 import com.group05.TC_LLM_Generator.application.port.in.authen.LogoutUseCase;
 import com.group05.TC_LLM_Generator.application.port.in.authen.RefreshTokenUseCase;
-import com.group05.TC_LLM_Generator.application.port.in.authen.RegisterUseCase;
+import com.group05.TC_LLM_Generator.application.port.in.authen.SignupUseCase;
+import com.group05.TC_LLM_Generator.application.port.in.authen.VerifySignupUseCase;
 import com.group05.TC_LLM_Generator.application.port.in.authen.dto.request.LoginRequest;
-import com.group05.TC_LLM_Generator.application.port.in.authen.dto.request.RegisterRequest;
+import com.group05.TC_LLM_Generator.application.port.in.authen.dto.request.SignupRequest;
 import com.group05.TC_LLM_Generator.application.port.in.authen.dto.result.AuthResponse;
+import com.group05.TC_LLM_Generator.application.port.in.authen.dto.result.SignupResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -27,7 +28,8 @@ public class AuthenController {
 
     private final LoginUseCase loginUseCase;
     private final LoginWithPasswordUseCase loginWithPasswordUseCase;
-    private final RegisterUseCase registerUseCase;
+    private final SignupUseCase signupUseCase;
+    private final VerifySignupUseCase verifySignupUseCase;
     private final LogoutUseCase logoutUseCase;
     private final RefreshTokenUseCase refreshTokenUseCase;
 
@@ -45,9 +47,19 @@ public class AuthenController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = registerUseCase.execute(request);
+    public ResponseEntity<SignupResponse> signup(@Valid @RequestBody SignupRequest request) {
+        SignupResponse response = signupUseCase.execute(request);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<Void> verify(
+            @RequestParam("token") String token,
+            @RequestParam("email") String email) {
+        String redirectUrl = verifySignupUseCase.execute(token, email);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, redirectUrl)
+                .build();
     }
 
     @PostMapping("/refresh")
@@ -70,3 +82,4 @@ public class AuthenController {
         return ResponseEntity.ok().build();
     }
 }
+
