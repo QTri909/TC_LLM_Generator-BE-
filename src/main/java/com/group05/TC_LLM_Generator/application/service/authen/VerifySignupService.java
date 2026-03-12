@@ -28,8 +28,15 @@ public class VerifySignupService implements VerifySignupUseCase {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${app.frontend-url}")
-    private String frontendUrl;
+    @Value("${app.frontend-urls}")
+    private String frontendUrls;
+
+    private String getFrontendUrl() {
+        if (frontendUrls != null && !frontendUrls.isEmpty()) {
+            return frontendUrls.split(",")[0];
+        }
+        return "http://localhost:3000";
+    }
 
     @Override
     public String execute(String token, String email) {
@@ -39,14 +46,14 @@ public class VerifySignupService implements VerifySignupUseCase {
         Optional<String> storedOtp = registrationCache.getOtp(hashedEmail);
         if (storedOtp.isEmpty() || !storedOtp.get().equals(token)) {
             log.warn("Invalid verification attempt for email: {}", email);
-            return frontendUrl + "/signup?error=invalid";
+            return getFrontendUrl() + "/signup?error=invalid";
         }
 
         // 2. Get registration info
         Optional<String> infoJson = registrationCache.getRegistrationInfo(hashedEmail);
         if (infoJson.isEmpty()) {
             log.warn("Registration info expired for email: {}", email);
-            return frontendUrl + "/signup?error=expired";
+            return getFrontendUrl() + "/signup?error=expired";
         }
 
         // 3. Parse info and save user to DB
@@ -75,13 +82,13 @@ public class VerifySignupService implements VerifySignupUseCase {
             log.info("User account created successfully for email: {}", email);
         } catch (JsonProcessingException e) {
             log.error("Failed to parse registration info for email: {}", email, e);
-            return frontendUrl + "/signup?error=invalid";
+            return getFrontendUrl() + "/signup?error=invalid";
         }
 
         // 4. Cleanup Redis
         registrationCache.clearRegistrationData(hashedEmail);
 
         // 5. Redirect to success
-        return frontendUrl + "/signup?verified=true";
+        return getFrontendUrl() + "/signup?verified=true";
     }
 }
