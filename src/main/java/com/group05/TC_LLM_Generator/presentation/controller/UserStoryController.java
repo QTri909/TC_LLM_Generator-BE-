@@ -142,9 +142,9 @@ public class UserStoryController {
     public ResponseEntity<ApiResponse<Void>> deleteUserStory(
             @PathVariable("id") UUID id,
             @AuthenticationPrincipal Jwt jwt) {
-            
+
         String currentUserId = jwt.getSubject();
-        
+
         if (!userStoryService.userStoryExists(id)) {
             throw new ResourceNotFoundException("UserStory", "id", id);
         }
