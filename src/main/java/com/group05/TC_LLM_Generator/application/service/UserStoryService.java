@@ -16,19 +16,35 @@ import java.util.UUID;
  * Application Service for UserStory entity
  * Handles CRUD operations and user story-related use cases
  */
+import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent;
+import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent.Action;
+import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent.EntityType;
+import org.springframework.context.ApplicationEventPublisher;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserStoryService {
 
     private final UserStoryRepositoryPort userStoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Create a new user story
      */
     @Transactional
-    public UserStory createUserStory(UserStory userStory) {
-        return userStoryRepository.save(userStory);
+    public UserStory createUserStory(UserStory userStory, String performedByUserId) {
+        UserStory saved = userStoryRepository.save(userStory);
+        
+        eventPublisher.publishEvent(new EntityChangedEvent(
+                this, EntityType.STORY, Action.CREATED,
+                saved.getUserStoryId().toString(),
+                saved.getProject().getProjectId().toString(),
+                null, 
+                performedByUserId
+        ));
+        
+        return saved;
     }
 
     /**
@@ -70,7 +86,7 @@ public class UserStoryService {
      * Update user story
      */
     @Transactional
-    public UserStory updateUserStory(UUID userStoryId, UserStory updatedUserStory) {
+    public UserStory updateUserStory(UUID userStoryId, UserStory updatedUserStory, String performedByUserId) {
         UserStory existingUserStory = userStoryRepository.findById(userStoryId)
                 .orElseThrow(() -> new IllegalArgumentException("User story not found: " + userStoryId));
 
@@ -86,18 +102,38 @@ public class UserStoryService {
             existingUserStory.setStatus(updatedUserStory.getStatus());
         }
 
-        return userStoryRepository.save(existingUserStory);
+        UserStory saved = userStoryRepository.save(existingUserStory);
+        
+        eventPublisher.publishEvent(new EntityChangedEvent(
+                this, EntityType.STORY, Action.UPDATED,
+                saved.getUserStoryId().toString(),
+                saved.getProject().getProjectId().toString(),
+                null, 
+                performedByUserId
+        ));
+
+        return saved;
     }
 
     /**
      * Delete user story by ID
      */
     @Transactional
-    public void deleteUserStory(UUID userStoryId) {
-        if (!userStoryRepository.existsById(userStoryId)) {
-            throw new IllegalArgumentException("User story not found: " + userStoryId);
-        }
+    public void deleteUserStory(UUID userStoryId, String performedByUserId) {
+        UserStory existingUserStory = userStoryRepository.findById(userStoryId)
+                .orElseThrow(() -> new IllegalArgumentException("User story not found: " + userStoryId));
+        
+        String projectId = existingUserStory.getProject().getProjectId().toString();
+
         userStoryRepository.deleteById(userStoryId);
+        
+        eventPublisher.publishEvent(new EntityChangedEvent(
+                this, EntityType.STORY, Action.DELETED,
+                userStoryId.toString(),
+                projectId,
+                null, 
+                performedByUserId
+        ));
     }
 
     /**

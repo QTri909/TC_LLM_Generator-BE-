@@ -21,6 +21,8 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -46,14 +48,17 @@ public class UserStoryController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<UserStoryResponse>> createUserStory(
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateUserStoryRequest request) {
+
+        String currentUserId = jwt.getSubject();
 
         Project project = projectService.getProjectById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
 
         UserStory userStory = mapper.toEntity(request);
         userStory.setProject(project);
-        UserStory savedUserStory = userStoryService.createUserStory(userStory);
+        UserStory savedUserStory = userStoryService.createUserStory(userStory, currentUserId);
         UserStoryResponse response = assembler.toModel(savedUserStory);
 
         return ResponseEntity
@@ -96,13 +101,16 @@ public class UserStoryController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<UserStoryResponse>> updateUserStory(
             @PathVariable("id") UUID id,
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody UpdateUserStoryRequest request) {
+
+        String currentUserId = jwt.getSubject();
 
         UserStory existingUserStory = userStoryService.getUserStoryById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", id));
 
         mapper.updateEntity(request, existingUserStory);
-        UserStory updatedUserStory = userStoryService.updateUserStory(id, existingUserStory);
+        UserStory updatedUserStory = userStoryService.updateUserStory(id, existingUserStory, currentUserId);
         UserStoryResponse response = assembler.toModel(updatedUserStory);
 
         return ResponseEntity.ok(ApiResponse.success(response, "User story updated successfully"));
@@ -113,12 +121,17 @@ public class UserStoryController {
      * DELETE /api/v1/user-stories/{id}
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteUserStory(@PathVariable("id") UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteUserStory(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+            
+        String currentUserId = jwt.getSubject();
+        
         if (!userStoryService.userStoryExists(id)) {
             throw new ResourceNotFoundException("UserStory", "id", id);
         }
 
-        userStoryService.deleteUserStory(id);
+        userStoryService.deleteUserStory(id, currentUserId);
 
         return ResponseEntity.ok(ApiResponse.success("User story deleted successfully"));
     }
