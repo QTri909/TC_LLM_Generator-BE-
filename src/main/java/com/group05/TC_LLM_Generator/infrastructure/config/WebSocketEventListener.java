@@ -57,7 +57,8 @@ public class WebSocketEventListener {
 
         message.put("performedBy", event.getPerformedBy());
 
-        messagingTemplate.convertAndSend(topic, message);
+        // Cast to Object to resolve ambiguous method call convertAndSend(String, Object) vs convertAndSend(Object, Map)
+        messagingTemplate.convertAndSend(topic, (Object) message);
 
         log.debug("[WebSocket] Broadcast {}.{} to topic '{}' (entityId={})",
                 event.getEntityType(), event.getAction(), topic, event.getEntityId());
