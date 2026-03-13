@@ -22,6 +22,10 @@ public interface TestCaseRepositoryPort {
 
     Page<TestCase> findAll(Pageable pageable);
 
+    List<TestCase> findByUserStoryId(UUID userStoryId);
+
+    Page<TestCase> findByUserStoryId(UUID userStoryId, Pageable pageable);
+
     List<TestCase> findByAcceptanceCriteriaId(UUID acceptanceCriteriaId);
 
     Page<TestCase> findByAcceptanceCriteriaId(UUID acceptanceCriteriaId, Pageable pageable);

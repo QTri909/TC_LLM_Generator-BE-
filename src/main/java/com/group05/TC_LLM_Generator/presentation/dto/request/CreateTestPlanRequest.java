@@ -31,4 +31,7 @@ public class CreateTestPlanRequest {
 
     /** Optional — list of user story IDs to include in this test plan */
     private List<UUID> storyIds;
+
+    /** Optional — list of test suite IDs to attach to this test plan */
+    private List<UUID> suiteIds;
 }

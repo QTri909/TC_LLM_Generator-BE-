@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -33,4 +34,10 @@ public interface TestSuiteItemRepository extends JpaRepository<TestSuiteItem, UU
      * @return List of test suite items ordered by display order
      */
     List<TestSuiteItem> findByTestSuite_TestSuiteIdOrderByDisplayOrderAsc(UUID testSuiteId);
+
+    Optional<TestSuiteItem> findByTestSuite_TestSuiteIdAndTestCase_TestCaseId(UUID testSuiteId, UUID testCaseId);
+
+    void deleteByTestSuite_TestSuiteIdAndTestCase_TestCaseId(UUID testSuiteId, UUID testCaseId);
+
+    long countByTestSuite_TestSuiteId(UUID testSuiteId);
 }

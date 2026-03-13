@@ -18,6 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateTestCaseRequest {
 
+    private UUID userStoryId;
+
     private UUID acceptanceCriteriaId;
 
     private UUID testCaseTypeId;

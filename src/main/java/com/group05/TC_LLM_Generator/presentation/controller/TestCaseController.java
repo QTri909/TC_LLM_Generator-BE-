@@ -1,7 +1,11 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
+import com.group05.TC_LLM_Generator.application.service.AcceptanceCriteriaService;
 import com.group05.TC_LLM_Generator.application.service.TestCaseService;
+import com.group05.TC_LLM_Generator.application.service.UserStoryService;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.AcceptanceCriteria;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestCase;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserStory;
 import com.group05.TC_LLM_Generator.presentation.assembler.TestCaseModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateTestCaseRequest;
@@ -23,29 +27,38 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-/**
- * REST Controller for TestCase CRUD operations.
- * Implements HATEOAS Level 3 REST API with wrapped responses and pagination.
- */
 @RestController
 @RequestMapping("/api/v1/test-cases")
 @RequiredArgsConstructor
 public class TestCaseController {
 
     private final TestCaseService testCaseService;
+    private final UserStoryService userStoryService;
+    private final AcceptanceCriteriaService acceptanceCriteriaService;
     private final TestCasePresentationMapper mapper;
     private final TestCaseModelAssembler assembler;
     private final PagedResourcesAssembler<TestCase> pagedResourcesAssembler;
 
-    /**
-     * Create a new test case
-     * POST /api/v1/test-cases
-     */
     @PostMapping
     public ResponseEntity<ApiResponse<TestCaseResponse>> createTestCase(
             @Valid @RequestBody CreateTestCaseRequest request) {
 
         TestCase testCase = mapper.toEntity(request);
+
+        // Resolve UserStory reference
+        if (request.getUserStoryId() != null) {
+            UserStory userStory = userStoryService.getUserStoryById(request.getUserStoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", request.getUserStoryId()));
+            testCase.setUserStory(userStory);
+        }
+
+        // Resolve AcceptanceCriteria reference
+        if (request.getAcceptanceCriteriaId() != null) {
+            AcceptanceCriteria ac = acceptanceCriteriaService.getAcceptanceCriteriaById(request.getAcceptanceCriteriaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("AcceptanceCriteria", "id", request.getAcceptanceCriteriaId()));
+            testCase.setAcceptanceCriteria(ac);
+        }
+
         TestCase savedTestCase = testCaseService.createTestCase(testCase);
         TestCaseResponse response = assembler.toModel(savedTestCase);
 
@@ -54,10 +67,6 @@ public class TestCaseController {
                 .body(ApiResponse.success(response, "Test case created successfully"));
     }
 
-    /**
-     * Get test case by ID
-     * GET /api/v1/test-cases/{id}
-     */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCaseById(@PathVariable("id") UUID id) {
         TestCase testCase = testCaseService.getTestCaseById(id)
@@ -68,10 +77,6 @@ public class TestCaseController {
         return ResponseEntity.ok(ApiResponse.success(response, "Test case retrieved successfully"));
     }
 
-    /**
-     * Get all test cases with pagination
-     * GET /api/v1/test-cases?page=0&size=20&sort=createdAt,desc
-     */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedModel<TestCaseResponse>>> getAllTestCases(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -82,10 +87,6 @@ public class TestCaseController {
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test cases retrieved successfully"));
     }
 
-    /**
-     * Update test case by ID
-     * PUT /api/v1/test-cases/{id}
-     */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseResponse>> updateTestCase(
             @PathVariable("id") UUID id,
@@ -101,10 +102,6 @@ public class TestCaseController {
         return ResponseEntity.ok(ApiResponse.success(response, "Test case updated successfully"));
     }
 
-    /**
-     * Delete test case by ID
-     * DELETE /api/v1/test-cases/{id}
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTestCase(@PathVariable("id") UUID id) {
         if (!testCaseService.testCaseExists(id)) {
@@ -116,10 +113,6 @@ public class TestCaseController {
         return ResponseEntity.ok(ApiResponse.success("Test case deleted successfully"));
     }
 
-    /**
-     * Search test cases by title with pagination
-     * GET /api/v1/test-cases/search?title=keyword&page=0&size=20
-     */
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PagedModel<TestCaseResponse>>> searchTestCases(
             @RequestParam("title") String title,
@@ -131,16 +124,23 @@ public class TestCaseController {
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test cases retrieved successfully"));
     }
 
-    /**
-     * Get test cases by acceptance criteria ID with pagination
-     * GET /api/v1/test-cases/acceptance-criteria/{acceptanceCriteriaId}?page=0&size=20
-     */
     @GetMapping("/acceptance-criteria/{acceptanceCriteriaId}")
     public ResponseEntity<ApiResponse<PagedModel<TestCaseResponse>>> getTestCasesByAcceptanceCriteria(
             @PathVariable("acceptanceCriteriaId") UUID acceptanceCriteriaId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<TestCase> page = testCaseService.getTestCasesByAcceptanceCriteria(acceptanceCriteriaId, pageable);
+        PagedModel<TestCaseResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
+
+        return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test cases retrieved successfully"));
+    }
+
+    @GetMapping("/user-story/{userStoryId}")
+    public ResponseEntity<ApiResponse<PagedModel<TestCaseResponse>>> getTestCasesByUserStory(
+            @PathVariable("userStoryId") UUID userStoryId,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Page<TestCase> page = testCaseService.getTestCasesByUserStory(userStoryId, pageable);
         PagedModel<TestCaseResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
 
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test cases retrieved successfully"));

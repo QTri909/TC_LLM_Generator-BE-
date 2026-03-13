@@ -20,6 +20,8 @@ public interface TestCasePresentationMapper {
     /**
      * Map TestCase to TestCaseResponse
      */
+    @Mapping(target = "userStoryId", source = "userStory.userStoryId")
+    @Mapping(target = "userStoryTitle", source = "userStory.title")
     @Mapping(target = "acceptanceCriteriaId", source = "acceptanceCriteria.acceptanceCriteriaId")
     @Mapping(target = "testCaseTypeId", source = "testCaseType.testCaseTypeId")
     @Mapping(target = "testCaseTypeName", source = "testCaseType.name")
@@ -34,6 +36,7 @@ public interface TestCasePresentationMapper {
      * Map CreateTestCaseRequest to TestCase
      */
     @Mapping(target = "testCaseId", ignore = true)
+    @Mapping(target = "userStory", ignore = true)
     @Mapping(target = "acceptanceCriteria", ignore = true)
     @Mapping(target = "testCaseType", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -43,6 +46,7 @@ public interface TestCasePresentationMapper {
      * Update TestCase from UpdateTestCaseRequest
      */
     @Mapping(target = "testCaseId", ignore = true)
+    @Mapping(target = "userStory", ignore = true)
     @Mapping(target = "acceptanceCriteria", ignore = true)
     @Mapping(target = "testCaseType", ignore = true)
     @Mapping(target = "generatedByAi", ignore = true)

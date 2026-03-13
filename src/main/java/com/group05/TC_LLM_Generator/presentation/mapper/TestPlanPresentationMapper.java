@@ -27,6 +27,7 @@ public interface TestPlanPresentationMapper {
     @Mapping(target = "createdByUserId", source = "createdByUser.userId")
     @Mapping(target = "createdByUserFullName", source = "createdByUser.fullName")
     @Mapping(target = "storyIds", source = "userStories", qualifiedByName = "storiesToIds")
+    @Mapping(target = "suiteIds", ignore = true)
     TestPlanResponse toResponse(TestPlan entity);
 
     /**

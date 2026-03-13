@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -33,4 +34,10 @@ public interface PlanSuiteRepository extends JpaRepository<PlanSuite, UUID> {
      * @return List of plan suites ordered by display order
      */
     List<PlanSuite> findByTestPlan_TestPlanIdOrderByDisplayOrderAsc(UUID testPlanId);
+
+    Optional<PlanSuite> findByTestPlan_TestPlanIdAndTestSuite_TestSuiteId(UUID testPlanId, UUID testSuiteId);
+
+    void deleteByTestPlan_TestPlanIdAndTestSuite_TestSuiteId(UUID testPlanId, UUID testSuiteId);
+
+    long countByTestPlan_TestPlanId(UUID testPlanId);
 }

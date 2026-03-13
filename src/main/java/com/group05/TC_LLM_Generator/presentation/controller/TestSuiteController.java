@@ -1,13 +1,20 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.ProjectService;
+import com.group05.TC_LLM_Generator.application.service.TestCaseService;
+import com.group05.TC_LLM_Generator.application.service.TestSuiteItemService;
 import com.group05.TC_LLM_Generator.application.service.TestSuiteService;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Project;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestCase;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestSuite;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestSuiteItem;
+import com.group05.TC_LLM_Generator.presentation.assembler.TestCaseModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.assembler.TestSuiteModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
+import com.group05.TC_LLM_Generator.presentation.dto.request.AddTestCaseToSuiteRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateTestSuiteRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateTestSuiteRequest;
+import com.group05.TC_LLM_Generator.presentation.dto.response.TestCaseResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.response.TestSuiteResponse;
 import com.group05.TC_LLM_Generator.presentation.exception.ResourceNotFoundException;
 import com.group05.TC_LLM_Generator.presentation.mapper.TestSuitePresentationMapper;
@@ -18,11 +25,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,9 +40,12 @@ import java.util.UUID;
 public class TestSuiteController {
 
     private final TestSuiteService testSuiteService;
+    private final TestSuiteItemService testSuiteItemService;
+    private final TestCaseService testCaseService;
     private final ProjectService projectService;
     private final TestSuitePresentationMapper mapper;
     private final TestSuiteModelAssembler assembler;
+    private final TestCaseModelAssembler testCaseAssembler;
     private final PagedResourcesAssembler<TestSuite> pagedResourcesAssembler;
 
     @PostMapping
@@ -109,5 +121,51 @@ public class TestSuiteController {
         PagedModel<TestSuiteResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
 
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test suites retrieved successfully"));
+    }
+
+    // ---- TestSuiteItem endpoints: manage test cases in a suite ----
+
+    @PostMapping("/{suiteId}/test-cases")
+    public ResponseEntity<ApiResponse<TestCaseResponse>> addTestCaseToSuite(
+            @PathVariable("suiteId") UUID suiteId,
+            @Valid @RequestBody AddTestCaseToSuiteRequest request) {
+
+        TestSuite testSuite = testSuiteService.getTestSuiteById(suiteId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestSuite", "id", suiteId));
+
+        TestCase testCase = testCaseService.getTestCaseById(request.getTestCaseId())
+                .orElseThrow(() -> new ResourceNotFoundException("TestCase", "id", request.getTestCaseId()));
+
+        TestSuiteItem item = testSuiteItemService.addTestCaseToSuite(testSuite, testCase);
+        TestCaseResponse response = testCaseAssembler.toModel(item.getTestCase());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Test case added to suite successfully"));
+    }
+
+    @DeleteMapping("/{suiteId}/test-cases/{testCaseId}")
+    public ResponseEntity<ApiResponse<Void>> removeTestCaseFromSuite(
+            @PathVariable("suiteId") UUID suiteId,
+            @PathVariable("testCaseId") UUID testCaseId) {
+
+        testSuiteItemService.removeTestCaseFromSuite(suiteId, testCaseId);
+
+        return ResponseEntity.ok(ApiResponse.success("Test case removed from suite successfully"));
+    }
+
+    @GetMapping("/{suiteId}/test-cases")
+    public ResponseEntity<ApiResponse<CollectionModel<TestCaseResponse>>> getTestCasesInSuite(
+            @PathVariable("suiteId") UUID suiteId) {
+
+        if (!testSuiteService.testSuiteExists(suiteId)) {
+            throw new ResourceNotFoundException("TestSuite", "id", suiteId);
+        }
+
+        List<TestSuiteItem> items = testSuiteItemService.getTestCasesInSuite(suiteId);
+        List<TestCase> testCases = items.stream().map(TestSuiteItem::getTestCase).toList();
+        CollectionModel<TestCaseResponse> collectionModel = testCaseAssembler.toCollectionModel(testCases);
+
+        return ResponseEntity.ok(ApiResponse.success(collectionModel, "Test cases in suite retrieved successfully"));
     }
 }

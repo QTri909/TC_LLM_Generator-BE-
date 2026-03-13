@@ -15,6 +15,10 @@ import java.util.UUID;
 @Repository
 public interface TestCaseRepository extends JpaRepository<TestCase, UUID> {
 
+    List<TestCase> findByUserStory_UserStoryId(UUID userStoryId);
+
+    Page<TestCase> findByUserStory_UserStoryId(UUID userStoryId, Pageable pageable);
+
     List<TestCase> findByAcceptanceCriteria_AcceptanceCriteriaId(UUID acceptanceCriteriaId);
 
     Page<TestCase> findByAcceptanceCriteria_AcceptanceCriteriaId(UUID acceptanceCriteriaId, Pageable pageable);

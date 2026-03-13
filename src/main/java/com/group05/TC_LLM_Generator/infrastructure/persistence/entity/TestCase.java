@@ -28,6 +28,10 @@ public class TestCase {
     private UUID testCaseId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "user_story_id", referencedColumnName = "user_story_id")
+    private UserStory userStory;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "acceptance_criteria_id", referencedColumnName = "acceptance_criteria_id")
     private AcceptanceCriteria acceptanceCriteria;
 

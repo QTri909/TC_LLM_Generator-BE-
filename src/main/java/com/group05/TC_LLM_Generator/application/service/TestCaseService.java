@@ -53,6 +53,20 @@ public class TestCaseService {
     }
 
     /**
+     * Get test cases by user story ID
+     */
+    public List<TestCase> getTestCasesByUserStory(UUID userStoryId) {
+        return testCaseRepository.findByUserStoryId(userStoryId);
+    }
+
+    /**
+     * Get test cases by user story ID with pagination
+     */
+    public Page<TestCase> getTestCasesByUserStory(UUID userStoryId, Pageable pageable) {
+        return testCaseRepository.findByUserStoryId(userStoryId, pageable);
+    }
+
+    /**
      * Get test cases by acceptance criteria ID
      */
     public List<TestCase> getTestCasesByAcceptanceCriteria(UUID acceptanceCriteriaId) {

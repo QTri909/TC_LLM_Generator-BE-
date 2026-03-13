@@ -27,4 +27,7 @@ public class UpdateTestPlanRequest {
 
     /** Optional — replace the linked user stories */
     private List<UUID> storyIds;
+
+    /** Optional — replace the linked test suites */
+    private List<UUID> suiteIds;
 }

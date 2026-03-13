@@ -27,6 +27,7 @@ public class TestPlanResponse extends RepresentationModel<TestPlanResponse> {
     private String description;
     private String status;
     private List<UUID> storyIds;
+    private List<UUID> suiteIds;
     private Instant createdAt;
     private Instant updatedAt;
 }

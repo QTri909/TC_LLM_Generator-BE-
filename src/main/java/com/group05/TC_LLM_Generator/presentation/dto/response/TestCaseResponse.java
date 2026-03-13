@@ -19,6 +19,8 @@ import java.util.UUID;
 public class TestCaseResponse extends RepresentationModel<TestCaseResponse> {
 
     private UUID testCaseId;
+    private UUID userStoryId;
+    private String userStoryTitle;
     private UUID acceptanceCriteriaId;
     private UUID testCaseTypeId;
     private String testCaseTypeName;

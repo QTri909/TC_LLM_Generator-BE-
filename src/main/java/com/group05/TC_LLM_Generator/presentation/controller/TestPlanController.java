@@ -1,21 +1,28 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
+import com.group05.TC_LLM_Generator.application.service.PlanSuiteService;
 import com.group05.TC_LLM_Generator.application.service.ProjectService;
 import com.group05.TC_LLM_Generator.application.service.TestPlanService;
+import com.group05.TC_LLM_Generator.application.service.TestSuiteService;
 import com.group05.TC_LLM_Generator.application.service.UserService;
 import com.group05.TC_LLM_Generator.application.service.UserStoryService;
 import com.group05.TC_LLM_Generator.domain.model.enums.TestPlanStatus;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.PlanSuite;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Project;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestPlan;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestSuite;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserStory;
 import com.group05.TC_LLM_Generator.presentation.assembler.TestPlanModelAssembler;
+import com.group05.TC_LLM_Generator.presentation.assembler.TestSuiteModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.assembler.UserStoryModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
+import com.group05.TC_LLM_Generator.presentation.dto.request.AttachSuiteToPlanRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateTestPlanRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateTestPlanRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateTestPlanStatusRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.response.TestPlanResponse;
+import com.group05.TC_LLM_Generator.presentation.dto.response.TestSuiteResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.response.UserStoryResponse;
 import com.group05.TC_LLM_Generator.presentation.exception.ResourceNotFoundException;
 import com.group05.TC_LLM_Generator.presentation.mapper.TestPlanPresentationMapper;
@@ -26,6 +33,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,11 +52,14 @@ import java.util.UUID;
 public class TestPlanController {
 
     private final TestPlanService testPlanService;
+    private final PlanSuiteService planSuiteService;
+    private final TestSuiteService testSuiteService;
     private final ProjectService projectService;
     private final UserService userService;
     private final UserStoryService userStoryService;
     private final TestPlanPresentationMapper mapper;
     private final TestPlanModelAssembler assembler;
+    private final TestSuiteModelAssembler testSuiteAssembler;
     private final UserStoryModelAssembler userStoryAssembler;
     private final PagedResourcesAssembler<TestPlan> pagedResourcesAssembler;
     private final PagedResourcesAssembler<UserStory> userStoryPagedAssembler;
@@ -71,7 +82,6 @@ public class TestPlanController {
             try {
                 status = TestPlanStatus.valueOf(request.getStatus().toUpperCase());
             } catch (IllegalArgumentException ignored) {
-                // fallback to DRAFT
             }
         }
 
@@ -86,7 +96,18 @@ public class TestPlanController {
         List<UserStory> stories = resolveStories(request.getStoryIds());
 
         TestPlan saved = testPlanService.createTestPlan(testPlan, stories, currentUserId.toString());
+
+        // Attach suites if provided
+        if (request.getSuiteIds() != null) {
+            for (UUID suiteId : request.getSuiteIds()) {
+                TestSuite suite = testSuiteService.getTestSuiteById(suiteId)
+                        .orElseThrow(() -> new ResourceNotFoundException("TestSuite", "id", suiteId));
+                planSuiteService.attachSuiteToPlan(saved, suite);
+            }
+        }
+
         TestPlanResponse response = assembler.toModel(saved);
+        enrichWithSuiteIds(response, saved.getTestPlanId());
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -99,6 +120,7 @@ public class TestPlanController {
                 .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
 
         TestPlanResponse response = assembler.toModel(testPlan);
+        enrichWithSuiteIds(response, id);
         return ResponseEntity.ok(ApiResponse.success(response, "Test plan retrieved successfully"));
     }
 
@@ -108,6 +130,7 @@ public class TestPlanController {
 
         Page<TestPlan> page = testPlanService.getAllTestPlans(pageable);
         PagedModel<TestPlanResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
+        pagedModel.getContent().forEach(r -> enrichWithSuiteIds(r, r.getTestPlanId()));
 
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test plans retrieved successfully"));
     }
@@ -129,7 +152,6 @@ public class TestPlanController {
             try {
                 existing.setStatus(TestPlanStatus.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException ignored) {
-                // Keep existing status
             }
         }
 
@@ -139,6 +161,7 @@ public class TestPlanController {
 
         TestPlan updated = testPlanService.updateTestPlan(id, existing, newStories, currentUserId);
         TestPlanResponse response = assembler.toModel(updated);
+        enrichWithSuiteIds(response, id);
 
         return ResponseEntity.ok(ApiResponse.success(response, "Test plan updated successfully"));
     }
@@ -163,6 +186,7 @@ public class TestPlanController {
 
         TestPlan updated = testPlanService.updateTestPlan(id, existing, null, currentUserId);
         TestPlanResponse response = assembler.toModel(updated);
+        enrichWithSuiteIds(response, id);
 
         return ResponseEntity.ok(ApiResponse.success(response, "Test plan status updated successfully"));
     }
@@ -202,6 +226,7 @@ public class TestPlanController {
         }
 
         PagedModel<TestPlanResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
+        pagedModel.getContent().forEach(r -> enrichWithSuiteIds(r, r.getTestPlanId()));
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test plans retrieved successfully"));
     }
 
@@ -220,6 +245,52 @@ public class TestPlanController {
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test plan stories retrieved successfully"));
     }
 
+    // ---- PlanSuite endpoints: manage test suites in a plan ----
+
+    @PostMapping("/{planId}/test-suites")
+    public ResponseEntity<ApiResponse<TestSuiteResponse>> attachSuiteToPlan(
+            @PathVariable("planId") UUID planId,
+            @Valid @RequestBody AttachSuiteToPlanRequest request) {
+
+        TestPlan testPlan = testPlanService.getTestPlanById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", planId));
+
+        TestSuite testSuite = testSuiteService.getTestSuiteById(request.getTestSuiteId())
+                .orElseThrow(() -> new ResourceNotFoundException("TestSuite", "id", request.getTestSuiteId()));
+
+        PlanSuite planSuite = planSuiteService.attachSuiteToPlan(testPlan, testSuite);
+        TestSuiteResponse response = testSuiteAssembler.toModel(planSuite.getTestSuite());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiResponse.success(response, "Test suite attached to plan successfully"));
+    }
+
+    @DeleteMapping("/{planId}/test-suites/{suiteId}")
+    public ResponseEntity<ApiResponse<Void>> detachSuiteFromPlan(
+            @PathVariable("planId") UUID planId,
+            @PathVariable("suiteId") UUID suiteId) {
+
+        planSuiteService.detachSuiteFromPlan(planId, suiteId);
+
+        return ResponseEntity.ok(ApiResponse.success("Test suite detached from plan successfully"));
+    }
+
+    @GetMapping("/{planId}/test-suites")
+    public ResponseEntity<ApiResponse<CollectionModel<TestSuiteResponse>>> getSuitesInPlan(
+            @PathVariable("planId") UUID planId) {
+
+        if (!testPlanService.testPlanExists(planId)) {
+            throw new ResourceNotFoundException("TestPlan", "id", planId);
+        }
+
+        List<PlanSuite> planSuites = planSuiteService.getSuitesInPlan(planId);
+        List<TestSuite> suites = planSuites.stream().map(PlanSuite::getTestSuite).toList();
+        CollectionModel<TestSuiteResponse> collectionModel = testSuiteAssembler.toCollectionModel(suites);
+
+        return ResponseEntity.ok(ApiResponse.success(collectionModel, "Test suites in plan retrieved successfully"));
+    }
+
     // ---- helpers ----
 
     private List<UserStory> resolveStories(List<UUID> storyIds) {
@@ -228,5 +299,13 @@ public class TestPlanController {
                 .map(storyId -> userStoryService.getUserStoryById(storyId)
                         .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", storyId)))
                 .toList();
+    }
+
+    private void enrichWithSuiteIds(TestPlanResponse response, UUID testPlanId) {
+        List<PlanSuite> planSuites = planSuiteService.getSuitesInPlan(testPlanId);
+        List<UUID> suiteIds = planSuites.stream()
+                .map(ps -> ps.getTestSuite().getTestSuiteId())
+                .toList();
+        response.setSuiteIds(suiteIds);
     }
 }

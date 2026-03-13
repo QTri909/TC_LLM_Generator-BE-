@@ -42,6 +42,16 @@ public class TestCaseRepositoryAdapter implements TestCaseRepositoryPort {
     }
 
     @Override
+    public List<TestCase> findByUserStoryId(UUID userStoryId) {
+        return jpaRepository.findByUserStory_UserStoryId(userStoryId);
+    }
+
+    @Override
+    public Page<TestCase> findByUserStoryId(UUID userStoryId, Pageable pageable) {
+        return jpaRepository.findByUserStory_UserStoryId(userStoryId, pageable);
+    }
+
+    @Override
     public List<TestCase> findByAcceptanceCriteriaId(UUID acceptanceCriteriaId) {
         return jpaRepository.findByAcceptanceCriteria_AcceptanceCriteriaId(acceptanceCriteriaId);
     }
