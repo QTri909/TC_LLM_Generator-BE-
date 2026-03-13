@@ -34,7 +34,8 @@ public class CreateTestCaseRequest {
 
     private String expectedResult;
 
-    private String customFieldsJson;
+    @Builder.Default
+    private String customFieldsJson = "{}";
 
     @Builder.Default
     private Boolean generatedByAi = false;

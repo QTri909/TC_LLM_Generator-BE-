@@ -53,10 +53,12 @@ public class TestCase {
 
     @Column(name = "custom_fields_json", nullable = false)
     @JdbcTypeCode(SqlTypes.JSON)
-    private String customFieldsJson;
+    @Builder.Default
+    private String customFieldsJson = "{}";
 
     @Column(name = "generated_by_ai", nullable = false)
-    private Boolean generatedByAi;
+    @Builder.Default
+    private Boolean generatedByAi = false;
 
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
