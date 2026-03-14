@@ -55,6 +55,14 @@ public class TestPlan {
     @Builder.Default
     private List<UserStory> userStories = new ArrayList<>();
 
+    @OneToMany(mappedBy = "testPlan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TestPlanItem> testPlanItems = new ArrayList<>();
+
+    @OneToMany(mappedBy = "testPlan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PlanSuite> planSuites = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private Instant createdAt;

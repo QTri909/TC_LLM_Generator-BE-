@@ -61,6 +61,10 @@ public class UserStory {
     @Builder.Default
     private List<AcceptanceCriteria> acceptanceCriteria = new ArrayList<>();
 
+    @OneToMany(mappedBy = "userStory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TestCase> testCases = new ArrayList<>();
+
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
     private Instant createdAt;

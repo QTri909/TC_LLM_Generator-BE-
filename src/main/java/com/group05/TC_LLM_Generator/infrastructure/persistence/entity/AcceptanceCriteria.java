@@ -5,6 +5,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -41,6 +43,10 @@ public class AcceptanceCriteria {
     @Column(name = "completed", nullable = false)
     @Builder.Default
     private Boolean completed = false;
+
+    @OneToMany(mappedBy = "acceptanceCriteria", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TestCase> testCases = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false)
     @CreationTimestamp
