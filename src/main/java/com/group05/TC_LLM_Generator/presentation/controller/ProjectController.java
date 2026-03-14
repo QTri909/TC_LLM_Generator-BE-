@@ -2,6 +2,7 @@ package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.ProjectService;
 import com.group05.TC_LLM_Generator.application.service.UserService;
+import com.group05.TC_LLM_Generator.domain.model.enums.ProjectStatus;
 import com.group05.TC_LLM_Generator.application.service.WorkspaceService;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Project;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
@@ -62,7 +63,7 @@ public class ProjectController {
                 .description(request.getDescription())
                 .jiraSiteId(request.getJiraSiteId())
                 .jiraProjectKey(request.getJiraProjectKey())
-                .status("ACTIVE")
+                .status(ProjectStatus.ACTIVE)
                 .build();
 
         Project savedProject = projectService.createProject(project);

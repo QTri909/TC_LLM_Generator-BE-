@@ -177,13 +177,40 @@ public class TestPlanController {
         TestPlan existing = testPlanService.getTestPlanById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
 
+        TestPlanStatus newStatus;
         try {
-            existing.setStatus(TestPlanStatus.valueOf(request.getStatus().toUpperCase()));
+            newStatus = TestPlanStatus.valueOf(request.getStatus().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(
-                    "Invalid status: " + request.getStatus() + ". Allowed: DRAFT, IN_PROGRESS, COMPLETED");
+                    "Invalid status: " + request.getStatus() + ". Allowed: DRAFT, COMPLETED");
         }
 
+        TestPlanStatus currentStatus = existing.getStatus();
+
+        // Same status — no-op
+        if (currentStatus == newStatus) {
+            TestPlanResponse response = assembler.toModel(existing);
+            enrichWithSuiteIds(response, id);
+            return ResponseEntity.ok(ApiResponse.success(response, "No status change needed"));
+        }
+
+        // Validate transitions
+        if (currentStatus == TestPlanStatus.DRAFT && newStatus == TestPlanStatus.COMPLETED) {
+            // DRAFT → COMPLETED: must have ≥1 suite attached
+            List<PlanSuite> suites = planSuiteService.getSuitesInPlan(id);
+            if (suites.isEmpty()) {
+                throw new IllegalStateException(
+                        "Cannot finalize test plan: at least 1 test suite must be attached");
+            }
+        } else if (currentStatus == TestPlanStatus.COMPLETED && newStatus == TestPlanStatus.DRAFT) {
+            // COMPLETED → DRAFT: always allowed (reopen)
+        } else {
+            throw new IllegalStateException(
+                    "Invalid transition: " + currentStatus + " → " + newStatus
+                    + ". Allowed: DRAFT → COMPLETED, COMPLETED → DRAFT");
+        }
+
+        existing.setStatus(newStatus);
         TestPlan updated = testPlanService.updateTestPlan(id, existing, null, currentUserId);
         TestPlanResponse response = assembler.toModel(updated);
         enrichWithSuiteIds(response, id);

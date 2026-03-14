@@ -2,12 +2,14 @@ package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.ProjectService;
 import com.group05.TC_LLM_Generator.application.service.UserStoryService;
+import com.group05.TC_LLM_Generator.domain.model.enums.StoryStatus;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.AcceptanceCriteria;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Project;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserStory;
 import com.group05.TC_LLM_Generator.presentation.assembler.UserStoryModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateUserStoryRequest;
+import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateStoryStatusRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateUserStoryRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.response.UserStoryResponse;
 import com.group05.TC_LLM_Generator.presentation.exception.ResourceNotFoundException;
@@ -167,5 +169,32 @@ public class UserStoryController {
         PagedModel<UserStoryResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
 
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "User stories retrieved successfully"));
+    }
+
+    /**
+     * Update user story status with transition validation
+     * PATCH /api/v1/user-stories/{id}/status
+     */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<UserStoryResponse>> updateUserStoryStatus(
+            @PathVariable("id") UUID id,
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UpdateStoryStatusRequest request) {
+
+        String currentUserId = jwt.getSubject();
+
+        StoryStatus newStatus;
+        try {
+            newStatus = StoryStatus.valueOf(request.getStatus().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Invalid status: " + request.getStatus()
+                    + ". Allowed: DRAFT, READY, IN_PROGRESS, DONE, ARCHIVED");
+        }
+
+        UserStory updated = userStoryService.updateStoryStatus(id, newStatus, currentUserId);
+        UserStoryResponse response = assembler.toModel(updated);
+
+        return ResponseEntity.ok(ApiResponse.success(response, "User story status updated successfully"));
     }
 }

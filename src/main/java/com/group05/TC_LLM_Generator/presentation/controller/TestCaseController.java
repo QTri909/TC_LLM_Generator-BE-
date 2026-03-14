@@ -82,6 +82,12 @@ public class TestCaseController {
         TestCase savedTestCase = testCaseService.createTestCase(testCase);
         TestCaseResponse response = assembler.toModel(savedTestCase);
 
+        // Auto-transition story status after TC created
+        if (savedTestCase.getUserStory() != null) {
+            userStoryService.tryAutoTransitionAfterTestCaseChange(
+                    savedTestCase.getUserStory().getUserStoryId(), true);
+        }
+
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Test case created successfully"));
@@ -124,11 +130,18 @@ public class TestCaseController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTestCase(@PathVariable("id") UUID id) {
-        if (!testCaseService.testCaseExists(id)) {
-            throw new ResourceNotFoundException("TestCase", "id", id);
-        }
+        TestCase testCase = testCaseService.getTestCaseById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("TestCase", "id", id));
+
+        UUID userStoryId = testCase.getUserStory() != null
+                ? testCase.getUserStory().getUserStoryId() : null;
 
         testCaseService.deleteTestCase(id);
+
+        // Auto-transition story status after TC deleted
+        if (userStoryId != null) {
+            userStoryService.tryAutoTransitionAfterTestCaseChange(userStoryId, false);
+        }
 
         return ResponseEntity.ok(ApiResponse.success("Test case deleted successfully"));
     }

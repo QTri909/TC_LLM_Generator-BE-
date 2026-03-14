@@ -92,6 +92,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle illegal state errors (e.g., invalid status transitions)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalStateException(IllegalStateException ex) {
+        log.warn("Illegal state: {}", ex.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
      * Handle type mismatch errors (e.g., invalid UUID)
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

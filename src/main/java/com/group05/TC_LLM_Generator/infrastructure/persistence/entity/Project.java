@@ -1,5 +1,6 @@
 package com.group05.TC_LLM_Generator.infrastructure.persistence.entity;
 
+import com.group05.TC_LLM_Generator.domain.model.enums.ProjectStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -52,8 +53,9 @@ public class Project {
     @Column(name = "jira_project_key", length = 50)
     private String jiraProjectKey;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
-    private String status;
+    private ProjectStatus status;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
