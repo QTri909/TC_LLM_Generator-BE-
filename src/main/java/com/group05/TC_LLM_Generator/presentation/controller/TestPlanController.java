@@ -285,8 +285,9 @@ public class TestPlanController {
         TestSuite testSuite = testSuiteService.getTestSuiteById(request.getTestSuiteId())
                 .orElseThrow(() -> new ResourceNotFoundException("TestSuite", "id", request.getTestSuiteId()));
 
-        PlanSuite planSuite = planSuiteService.attachSuiteToPlan(testPlan, testSuite);
-        TestSuiteResponse response = testSuiteAssembler.toModel(planSuite.getTestSuite());
+        planSuiteService.attachSuiteToPlan(testPlan, testSuite);
+        // Use the already-loaded testSuite (not the lazy proxy from planSuite)
+        TestSuiteResponse response = testSuiteAssembler.toModel(testSuite);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)

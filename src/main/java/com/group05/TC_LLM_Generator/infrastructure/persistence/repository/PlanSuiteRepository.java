@@ -1,6 +1,7 @@
 package com.group05.TC_LLM_Generator.infrastructure.persistence.repository;
 
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.PlanSuite;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -19,6 +20,7 @@ public interface PlanSuiteRepository extends JpaRepository<PlanSuite, UUID> {
      * @param testPlanId test plan ID
      * @return List of plan suites
      */
+    @EntityGraph(attributePaths = {"testSuite", "testSuite.project"})
     List<PlanSuite> findByTestPlan_TestPlanId(UUID testPlanId);
 
     /**
@@ -33,8 +35,10 @@ public interface PlanSuiteRepository extends JpaRepository<PlanSuite, UUID> {
      * @param testPlanId test plan ID
      * @return List of plan suites ordered by display order
      */
+    @EntityGraph(attributePaths = {"testSuite", "testSuite.project"})
     List<PlanSuite> findByTestPlan_TestPlanIdOrderByDisplayOrderAsc(UUID testPlanId);
 
+    @EntityGraph(attributePaths = {"testSuite", "testSuite.project"})
     Optional<PlanSuite> findByTestPlan_TestPlanIdAndTestSuite_TestSuiteId(UUID testPlanId, UUID testSuiteId);
 
     void deleteByTestPlan_TestPlanIdAndTestSuite_TestSuiteId(UUID testPlanId, UUID testSuiteId);
