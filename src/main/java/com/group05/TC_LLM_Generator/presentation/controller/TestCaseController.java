@@ -1,9 +1,11 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.AcceptanceCriteriaService;
+import com.group05.TC_LLM_Generator.application.service.ProjectAuthorizationService;
 import com.group05.TC_LLM_Generator.application.service.TestCaseService;
 import com.group05.TC_LLM_Generator.application.service.UserStoryService;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.AcceptanceCriteria;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Project;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestCase;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserStory;
 import com.group05.TC_LLM_Generator.presentation.assembler.TestCaseModelAssembler;
@@ -23,6 +25,8 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -35,13 +39,17 @@ public class TestCaseController {
     private final TestCaseService testCaseService;
     private final UserStoryService userStoryService;
     private final AcceptanceCriteriaService acceptanceCriteriaService;
+    private final ProjectAuthorizationService projectAuth;
     private final TestCasePresentationMapper mapper;
     private final TestCaseModelAssembler assembler;
     private final PagedResourcesAssembler<TestCase> pagedResourcesAssembler;
 
     @PostMapping
     public ResponseEntity<ApiResponse<TestCaseResponse>> createTestCase(
+            @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateTestCaseRequest request) {
+
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
 
         // Enforce: must provide userStoryId or acceptanceCriteriaId
         if (request.getUserStoryId() == null && request.getAcceptanceCriteriaId() == null) {
@@ -52,7 +60,6 @@ public class TestCaseController {
         TestCase testCase = mapper.toEntity(request);
 
         if (request.getAcceptanceCriteriaId() != null) {
-            // Load AC with its UserStory (lazy init inside service)
             AcceptanceCriteria ac = acceptanceCriteriaService.getAcceptanceCriteriaWithUserStory(
                             request.getAcceptanceCriteriaId())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -60,7 +67,6 @@ public class TestCaseController {
             testCase.setAcceptanceCriteria(ac);
 
             if (request.getUserStoryId() != null) {
-                // Both provided — validate AC belongs to the given story
                 if (!ac.getUserStory().getUserStoryId().equals(request.getUserStoryId())) {
                     throw new IllegalArgumentException(
                             "AcceptanceCriteria " + request.getAcceptanceCriteriaId()
@@ -68,16 +74,19 @@ public class TestCaseController {
                 }
                 testCase.setUserStory(ac.getUserStory());
             } else {
-                // Only AC provided — auto-resolve UserStory from AC
                 testCase.setUserStory(ac.getUserStory());
             }
         } else {
-            // Only userStoryId provided
             UserStory userStory = userStoryService.getUserStoryById(request.getUserStoryId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "UserStory", "id", request.getUserStoryId()));
             testCase.setUserStory(userStory);
         }
+
+        // Auth: require contributor access
+        Project project = testCase.getUserStory().getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         TestCase savedTestCase = testCaseService.createTestCase(testCase);
         TestCaseResponse response = assembler.toModel(savedTestCase);
@@ -94,9 +103,18 @@ public class TestCaseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCaseById(@PathVariable("id") UUID id) {
+    public ResponseEntity<ApiResponse<TestCaseResponse>> getTestCaseById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id) {
+
         TestCase testCase = testCaseService.getTestCaseById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestCase", "id", id));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = testCase.getUserStory().getProject();
+        projectAuth.requireProjectAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         TestCaseResponse response = assembler.toModel(testCase);
 
@@ -115,11 +133,19 @@ public class TestCaseController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseResponse>> updateTestCase(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") UUID id,
             @Valid @RequestBody UpdateTestCaseRequest request) {
 
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+
         TestCase existingTestCase = testCaseService.getTestCaseById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestCase", "id", id));
+
+        // Auth: require contributor access
+        Project project = existingTestCase.getUserStory().getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         mapper.updateEntity(request, existingTestCase);
         TestCase updatedTestCase = testCaseService.updateTestCase(id, existingTestCase);
@@ -129,9 +155,19 @@ public class TestCaseController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteTestCase(@PathVariable("id") UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteTestCase(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id) {
+
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+
         TestCase testCase = testCaseService.getTestCaseById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestCase", "id", id));
+
+        // Auth: require Lead access for deletion
+        Project project = testCase.getUserStory().getProject();
+        projectAuth.requireLeadAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         UUID userStoryId = testCase.getUserStory() != null
                 ? testCase.getUserStory().getUserStoryId() : null;
@@ -170,8 +206,18 @@ public class TestCaseController {
 
     @GetMapping("/user-story/{userStoryId}")
     public ResponseEntity<ApiResponse<PagedModel<TestCaseResponse>>> getTestCasesByUserStory(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("userStoryId") UUID userStoryId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        UserStory userStory = userStoryService.getUserStoryById(userStoryId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", userStoryId));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = userStory.getProject();
+        projectAuth.requireProjectAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         Page<TestCase> page = testCaseService.getTestCasesByUserStory(userStoryId, pageable);
         PagedModel<TestCaseResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);

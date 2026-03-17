@@ -1,5 +1,6 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
+import com.group05.TC_LLM_Generator.application.service.ProjectAuthorizationService;
 import com.group05.TC_LLM_Generator.application.service.ProjectService;
 import com.group05.TC_LLM_Generator.application.service.UserStoryService;
 import com.group05.TC_LLM_Generator.domain.model.enums.StoryStatus;
@@ -43,6 +44,7 @@ public class UserStoryController {
 
     private final UserStoryService userStoryService;
     private final ProjectService projectService;
+    private final ProjectAuthorizationService projectAuth;
     private final UserStoryPresentationMapper mapper;
     private final AcceptanceCriteriaPresentationMapper acMapper;
     private final UserStoryModelAssembler assembler;
@@ -61,6 +63,11 @@ public class UserStoryController {
 
         Project project = projectService.getProjectById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
+
+        // Auth: require contributor access (Lead/Developer/Tester or WS Admin)
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
 
         UserStory userStory = mapper.toEntity(request);
         userStory.setProject(project);
@@ -84,9 +91,18 @@ public class UserStoryController {
      * GET /api/v1/user-stories/{id}
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserStoryResponse>> getUserStoryById(@PathVariable("id") UUID id) {
+    public ResponseEntity<ApiResponse<UserStoryResponse>> getUserStoryById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id) {
+
         UserStory userStory = userStoryService.getUserStoryById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", id));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = userStory.getProject();
+        projectAuth.requireProjectAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         UserStoryResponse response = assembler.toModel(userStory);
 
@@ -122,6 +138,12 @@ public class UserStoryController {
         UserStory existingUserStory = userStoryService.getUserStoryById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", id));
 
+        // Auth: require contributor access
+        Project project = existingUserStory.getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
+
         mapper.updateEntity(request, existingUserStory);
 
         // Map AC request DTOs to entities if provided
@@ -147,9 +169,14 @@ public class UserStoryController {
 
         String currentUserId = jwt.getSubject();
 
-        if (!userStoryService.userStoryExists(id)) {
-            throw new ResourceNotFoundException("UserStory", "id", id);
-        }
+        UserStory userStory = userStoryService.getUserStoryById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", id));
+
+        // Auth: require Lead access for deletion
+        Project project = userStory.getProject();
+        projectAuth.requireLeadAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
 
         userStoryService.deleteUserStory(id, currentUserId);
 
@@ -162,8 +189,17 @@ public class UserStoryController {
      */
     @GetMapping("/project/{projectId}")
     public ResponseEntity<ApiResponse<PagedModel<UserStoryResponse>>> getUserStoriesByProject(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("projectId") UUID projectId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Project project = projectService.getProjectById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        projectAuth.requireProjectAccess(
+                projectId, project.getWorkspace().getWorkspaceId(), currentUserId);
 
         Page<UserStory> page = userStoryService.getUserStoriesByProject(projectId, pageable);
         PagedModel<UserStoryResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
@@ -182,6 +218,15 @@ public class UserStoryController {
             @Valid @RequestBody UpdateStoryStatusRequest request) {
 
         String currentUserId = jwt.getSubject();
+
+        UserStory userStory = userStoryService.getUserStoryById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", id));
+
+        // Auth: require contributor access for status changes
+        Project project = userStory.getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
 
         StoryStatus newStatus;
         try {

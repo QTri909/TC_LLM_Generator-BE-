@@ -1,6 +1,7 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.PlanSuiteService;
+import com.group05.TC_LLM_Generator.application.service.ProjectAuthorizationService;
 import com.group05.TC_LLM_Generator.application.service.ProjectService;
 import com.group05.TC_LLM_Generator.application.service.TestPlanService;
 import com.group05.TC_LLM_Generator.application.service.TestSuiteService;
@@ -55,6 +56,7 @@ public class TestPlanController {
     private final PlanSuiteService planSuiteService;
     private final TestSuiteService testSuiteService;
     private final ProjectService projectService;
+    private final ProjectAuthorizationService projectAuth;
     private final UserService userService;
     private final UserStoryService userStoryService;
     private final TestPlanPresentationMapper mapper;
@@ -73,6 +75,10 @@ public class TestPlanController {
 
         Project project = projectService.getProjectById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
+
+        // Auth: require contributor access
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         UserEntity creator = userService.getUserById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUserId));
@@ -115,9 +121,18 @@ public class TestPlanController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestPlanResponse>> getTestPlanById(@PathVariable("id") UUID id) {
+    public ResponseEntity<ApiResponse<TestPlanResponse>> getTestPlanById(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id) {
+
         TestPlan testPlan = testPlanService.getTestPlanById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = testPlan.getProject();
+        projectAuth.requireProjectAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         TestPlanResponse response = assembler.toModel(testPlan);
         enrichWithSuiteIds(response, id);
@@ -145,6 +160,12 @@ public class TestPlanController {
 
         TestPlan existing = testPlanService.getTestPlanById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
+
+        // Auth: require contributor access
+        Project project = existing.getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
 
         mapper.updateEntity(request, existing);
 
@@ -176,6 +197,12 @@ public class TestPlanController {
 
         TestPlan existing = testPlanService.getTestPlanById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
+
+        // Auth: require contributor access for status changes
+        Project project = existing.getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
 
         TestPlanStatus newStatus;
         try {
@@ -225,9 +252,14 @@ public class TestPlanController {
 
         String currentUserId = jwt.getSubject();
 
-        if (!testPlanService.testPlanExists(id)) {
-            throw new ResourceNotFoundException("TestPlan", "id", id);
-        }
+        TestPlan testPlan = testPlanService.getTestPlanById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
+
+        // Auth: require Lead access for deletion
+        Project project = testPlan.getProject();
+        projectAuth.requireLeadAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(),
+                UUID.fromString(currentUserId));
 
         testPlanService.deleteTestPlan(id, currentUserId);
         return ResponseEntity.ok(ApiResponse.success("Test plan deleted successfully"));
@@ -235,9 +267,18 @@ public class TestPlanController {
 
     @GetMapping("/project/{projectId}")
     public ResponseEntity<ApiResponse<PagedModel<TestPlanResponse>>> getTestPlansByProject(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("projectId") UUID projectId,
             @RequestParam(required = false) String status,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Project project = projectService.getProjectById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        projectAuth.requireProjectAccess(
+                projectId, project.getWorkspace().getWorkspaceId(), currentUserId);
 
         Page<TestPlan> page;
 
@@ -259,12 +300,18 @@ public class TestPlanController {
 
     @GetMapping("/{id}/stories")
     public ResponseEntity<ApiResponse<PagedModel<UserStoryResponse>>> getTestPlanStories(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") UUID id,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        if (!testPlanService.testPlanExists(id)) {
-            throw new ResourceNotFoundException("TestPlan", "id", id);
-        }
+        TestPlan testPlan = testPlanService.getTestPlanById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", id));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = testPlan.getProject();
+        projectAuth.requireProjectAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         Page<UserStory> page = testPlanService.getStoriesByTestPlanId(id, pageable);
         PagedModel<UserStoryResponse> pagedModel = userStoryPagedAssembler.toModel(page, userStoryAssembler);
@@ -276,17 +323,23 @@ public class TestPlanController {
 
     @PostMapping("/{planId}/test-suites")
     public ResponseEntity<ApiResponse<TestSuiteResponse>> attachSuiteToPlan(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("planId") UUID planId,
             @Valid @RequestBody AttachSuiteToPlanRequest request) {
 
         TestPlan testPlan = testPlanService.getTestPlanById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", planId));
 
+        // Auth: require contributor access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = testPlan.getProject();
+        projectAuth.requireContributorAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
+
         TestSuite testSuite = testSuiteService.getTestSuiteById(request.getTestSuiteId())
                 .orElseThrow(() -> new ResourceNotFoundException("TestSuite", "id", request.getTestSuiteId()));
 
         planSuiteService.attachSuiteToPlan(testPlan, testSuite);
-        // Use the already-loaded testSuite (not the lazy proxy from planSuite)
         TestSuiteResponse response = testSuiteAssembler.toModel(testSuite);
 
         return ResponseEntity
@@ -296,8 +349,18 @@ public class TestPlanController {
 
     @DeleteMapping("/{planId}/test-suites/{suiteId}")
     public ResponseEntity<ApiResponse<Void>> detachSuiteFromPlan(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("planId") UUID planId,
             @PathVariable("suiteId") UUID suiteId) {
+
+        TestPlan testPlan = testPlanService.getTestPlanById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", planId));
+
+        // Auth: require Lead access for detaching suites
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = testPlan.getProject();
+        projectAuth.requireLeadAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         planSuiteService.detachSuiteFromPlan(planId, suiteId);
 
@@ -306,11 +369,17 @@ public class TestPlanController {
 
     @GetMapping("/{planId}/test-suites")
     public ResponseEntity<ApiResponse<CollectionModel<TestSuiteResponse>>> getSuitesInPlan(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("planId") UUID planId) {
 
-        if (!testPlanService.testPlanExists(planId)) {
-            throw new ResourceNotFoundException("TestPlan", "id", planId);
-        }
+        TestPlan testPlan = testPlanService.getTestPlanById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("TestPlan", "id", planId));
+
+        // Auth: require read access
+        UUID currentUserId = UUID.fromString(jwt.getSubject());
+        Project project = testPlan.getProject();
+        projectAuth.requireProjectAccess(
+                project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
 
         List<PlanSuite> planSuites = planSuiteService.getSuitesInPlan(planId);
         List<TestSuite> suites = planSuites.stream().map(PlanSuite::getTestSuite).toList();
