@@ -4,6 +4,7 @@ import com.group05.TC_LLM_Generator.application.port.out.WorkspaceRepositoryPort
 import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent;
 import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent.Action;
 import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent.EntityType;
+import com.group05.TC_LLM_Generator.domain.model.enums.WorkspaceRole;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.WorkspaceMember;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.repository.WorkspaceMemberRepository;
@@ -42,7 +43,7 @@ public class WorkspaceService {
         WorkspaceMember ownerMember = WorkspaceMember.builder()
                 .workspace(saved)
                 .user(saved.getOwnerUser())
-                .role("Owner")
+                .role(WorkspaceRole.Owner.name())
                 .joinedAt(java.time.Instant.now())
                 .build();
         workspaceMemberRepository.save(ownerMember);

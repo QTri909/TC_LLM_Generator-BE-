@@ -3,6 +3,7 @@ package com.group05.TC_LLM_Generator.application.service;
 import com.group05.TC_LLM_Generator.application.port.out.ProjectMemberRepositoryPort;
 import com.group05.TC_LLM_Generator.application.port.out.WorkspaceMemberRepositoryPort;
 import com.group05.TC_LLM_Generator.application.port.out.WorkspaceRepositoryPort;
+import com.group05.TC_LLM_Generator.domain.model.enums.WorkspaceRole;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.ProjectMember;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
@@ -87,7 +88,7 @@ public class WorkspaceMemberService {
         }
         Optional<WorkspaceMember> member = workspaceMemberRepository
                 .findByWorkspaceIdAndUserId(workspaceId, userId);
-        return member.map(m -> "Owner".equals(m.getRole()) || "Admin".equals(m.getRole()))
+        return member.map(m -> WorkspaceRole.Owner.name().equals(m.getRole()) || WorkspaceRole.Admin.name().equals(m.getRole()))
                 .orElse(false);
     }
 
@@ -97,7 +98,7 @@ public class WorkspaceMemberService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Workspace member not found: " + workspaceMemberId));
 
-        if ("Owner".equals(member.getRole())) {
+        if (WorkspaceRole.Owner.name().equals(member.getRole())) {
             throw new IllegalArgumentException("Cannot change the role of the workspace owner");
         }
 
@@ -111,7 +112,7 @@ public class WorkspaceMemberService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Workspace member not found: " + workspaceMemberId));
 
-        if ("Owner".equals(member.getRole())) {
+        if (WorkspaceRole.Owner.name().equals(member.getRole())) {
             throw new IllegalArgumentException("Cannot remove the workspace owner");
         }
 
@@ -151,7 +152,7 @@ public class WorkspaceMemberService {
             WorkspaceMember ownerMember = WorkspaceMember.builder()
                     .workspace(ws)
                     .user(ws.getOwnerUser())
-                    .role("Owner")
+                    .role(WorkspaceRole.Owner.name())
                     .joinedAt(ws.getCreatedAt() != null ? ws.getCreatedAt() : Instant.now())
                     .build();
             workspaceMemberRepository.save(ownerMember);
