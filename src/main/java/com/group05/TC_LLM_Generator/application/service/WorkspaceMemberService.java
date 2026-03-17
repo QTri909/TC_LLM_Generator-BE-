@@ -1,10 +1,12 @@
 package com.group05.TC_LLM_Generator.application.service;
 
 import com.group05.TC_LLM_Generator.application.port.out.WorkspaceMemberRepositoryPort;
+import com.group05.TC_LLM_Generator.application.port.out.WorkspaceRepositoryPort;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.WorkspaceMember;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,12 +17,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class WorkspaceMemberService {
 
     private final WorkspaceMemberRepositoryPort workspaceMemberRepository;
+    private final WorkspaceRepositoryPort workspaceRepository;
 
     @Transactional
     public WorkspaceMember addMember(Workspace workspace, UserEntity user, String role) {
@@ -43,11 +47,15 @@ public class WorkspaceMemberService {
         return workspaceMemberRepository.findById(workspaceMemberId);
     }
 
+    @Transactional
     public List<WorkspaceMember> getByWorkspaceId(UUID workspaceId) {
+        ensureOwnerMember(workspaceId);
         return workspaceMemberRepository.findByWorkspaceId(workspaceId);
     }
 
+    @Transactional
     public Page<WorkspaceMember> getByWorkspaceId(UUID workspaceId, Pageable pageable) {
+        ensureOwnerMember(workspaceId);
         return workspaceMemberRepository.findByWorkspaceId(workspaceId, pageable);
     }
 
@@ -99,5 +107,30 @@ public class WorkspaceMemberService {
 
     public long countMembers(UUID workspaceId) {
         return workspaceMemberRepository.countByWorkspaceId(workspaceId);
+    }
+
+    /**
+     * Self-healing: ensure the workspace owner has a WorkspaceMember record.
+     * Workspaces created before the auto-create fix won't have one.
+     */
+    @Transactional
+    public void ensureOwnerMember(UUID workspaceId) {
+        Optional<Workspace> wsOpt = workspaceRepository.findById(workspaceId);
+        if (wsOpt.isEmpty()) return;
+
+        Workspace ws = wsOpt.get();
+        UUID ownerUserId = ws.getOwnerUser().getUserId();
+
+        if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, ownerUserId)) {
+            WorkspaceMember ownerMember = WorkspaceMember.builder()
+                    .workspace(ws)
+                    .user(ws.getOwnerUser())
+                    .role("Owner")
+                    .joinedAt(ws.getCreatedAt() != null ? ws.getCreatedAt() : Instant.now())
+                    .build();
+            workspaceMemberRepository.save(ownerMember);
+            log.info("Auto-created Owner WorkspaceMember for workspace '{}' ({})",
+                    ws.getName(), workspaceId);
+        }
     }
 }
