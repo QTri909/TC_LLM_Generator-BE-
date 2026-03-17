@@ -18,6 +18,9 @@ import java.util.UUID;
 public interface WorkspaceMemberRepository extends JpaRepository<WorkspaceMember, UUID> {
 
     @EntityGraph(attributePaths = {"workspace", "user"})
+    Optional<WorkspaceMember> findById(UUID id);
+
+    @EntityGraph(attributePaths = {"workspace", "user"})
     List<WorkspaceMember> findByWorkspace_WorkspaceId(UUID workspaceId);
 
     @EntityGraph(attributePaths = {"workspace", "user"})
