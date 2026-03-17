@@ -33,7 +33,8 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/api-docs/**",
-            "/ws/**"
+            "/ws/**",
+            "/api/v1/workspace-invitations/*/info"
     };
 
     @Autowired

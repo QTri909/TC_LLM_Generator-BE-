@@ -5,6 +5,7 @@ import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent;
 import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent.Action;
 import com.group05.TC_LLM_Generator.domain.event.EntityChangedEvent.EntityType;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.Workspace;
+import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.WorkspaceMember;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.repository.WorkspaceMemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,6 +37,15 @@ public class WorkspaceService {
     @Transactional
     public Workspace createWorkspace(Workspace workspace) {
         Workspace saved = workspaceRepository.save(workspace);
+
+        // Auto-create WorkspaceMember with OWNER role for the creator
+        WorkspaceMember ownerMember = WorkspaceMember.builder()
+                .workspace(saved)
+                .user(saved.getOwnerUser())
+                .role("Owner")
+                .joinedAt(java.time.Instant.now())
+                .build();
+        workspaceMemberRepository.save(ownerMember);
 
         eventPublisher.publishEvent(new EntityChangedEvent(
                 this, EntityType.WORKSPACE, Action.CREATED,
