@@ -1,6 +1,7 @@
 package com.group05.TC_LLM_Generator.application.service;
 
-import com.group05.TC_LLM_Generator.application.port.out.*;
+import com.group05.TC_LLM_Generator.application.port.out.TestCaseRepositoryPort;
+import com.group05.TC_LLM_Generator.application.port.out.UserStoryRepositoryPort;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestCase;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserStory;
 import lombok.RequiredArgsConstructor;
@@ -17,29 +18,41 @@ public class ReportService {
 
     private final TestCaseRepositoryPort testCaseRepository;
     private final UserStoryRepositoryPort userStoryRepository;
-    private final TestSuiteRepositoryPort testSuiteRepository;
-    private final TestPlanRepositoryPort testPlanRepository;
 
     /**
-     * Get test case status distribution across workspace.
+     * Get test case type distribution (by TestCaseType name).
      */
-    public Map<String, Long> getTestCaseStatusDistribution() {
+    public Map<String, Long> getTestCaseTypeDistribution() {
         List<TestCase> allCases = testCaseRepository.findAll();
         return allCases.stream()
                 .collect(Collectors.groupingBy(
-                        tc -> tc.getStatus() != null ? tc.getStatus() : "UNKNOWN",
+                        tc -> tc.getTestCaseType() != null ? tc.getTestCaseType().getName() : "Uncategorized",
                         Collectors.counting()
                 ));
     }
 
     /**
-     * Get user story status distribution across workspace.
+     * Get AI vs Manual generation breakdown.
+     */
+    public Map<String, Long> getAiVsManualDistribution() {
+        List<TestCase> allCases = testCaseRepository.findAll();
+        long aiGenerated = allCases.stream().filter(tc -> Boolean.TRUE.equals(tc.getGeneratedByAi())).count();
+        long manual = allCases.size() - aiGenerated;
+
+        Map<String, Long> result = new LinkedHashMap<>();
+        if (aiGenerated > 0) result.put("AI Generated", aiGenerated);
+        if (manual > 0) result.put("Manual", manual);
+        return result;
+    }
+
+    /**
+     * Get user story status distribution.
      */
     public Map<String, Long> getStoryStatusDistribution() {
         List<UserStory> allStories = userStoryRepository.findAll();
         return allStories.stream()
                 .collect(Collectors.groupingBy(
-                        s -> s.getStatus() != null ? s.getStatus() : "UNKNOWN",
+                        s -> s.getStatus() != null ? s.getStatus().name() : "UNKNOWN",
                         Collectors.counting()
                 ));
     }
@@ -60,50 +73,24 @@ public class ReportService {
         long covered = allStories.stream()
                 .filter(s -> coveredStoryIds.contains(s.getUserStoryId()))
                 .count();
-        long uncovered = totalStories - covered;
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalStories", totalStories);
         result.put("coveredStories", covered);
-        result.put("uncoveredStories", uncovered);
+        result.put("uncoveredStories", totalStories - covered);
         result.put("coveragePercent", totalStories > 0 ? Math.round(covered * 100.0 / totalStories) : 0);
         return result;
     }
 
     /**
-     * Get test case type distribution (AI-generated vs manual).
-     */
-    public Map<String, Long> getTestCaseTypeDistribution() {
-        List<TestCase> allCases = testCaseRepository.findAll();
-        return allCases.stream()
-                .collect(Collectors.groupingBy(
-                        tc -> tc.getTestCaseType() != null ? tc.getTestCaseType().name() : "MANUAL",
-                        Collectors.counting()
-                ));
-    }
-
-    /**
-     * Get test case priority distribution.
-     */
-    public Map<String, Long> getTestCasePriorityDistribution() {
-        List<TestCase> allCases = testCaseRepository.findAll();
-        return allCases.stream()
-                .collect(Collectors.groupingBy(
-                        tc -> tc.getPriority() != null ? tc.getPriority() : "MEDIUM",
-                        Collectors.counting()
-                ));
-    }
-
-    /**
-     * Aggregate all report data into a single response.
+     * Aggregate all report data.
      */
     public Map<String, Object> getFullReport() {
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("testCaseStatusDistribution", getTestCaseStatusDistribution());
+        report.put("testCaseTypeDistribution", getTestCaseTypeDistribution());
+        report.put("aiVsManualDistribution", getAiVsManualDistribution());
         report.put("storyStatusDistribution", getStoryStatusDistribution());
         report.put("requirementCoverage", getRequirementCoverage());
-        report.put("testCaseTypeDistribution", getTestCaseTypeDistribution());
-        report.put("testCasePriorityDistribution", getTestCasePriorityDistribution());
         return report;
     }
 }
