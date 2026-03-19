@@ -50,7 +50,15 @@ public class AcceptanceCriteriaService {
      */
     public Optional<AcceptanceCriteria> getAcceptanceCriteriaWithUserStory(UUID acceptanceCriteriaId) {
         Optional<AcceptanceCriteria> opt = acceptanceCriteriaRepository.findById(acceptanceCriteriaId);
-        opt.ifPresent(ac -> Hibernate.initialize(ac.getUserStory()));
+        opt.ifPresent(ac -> {
+            Hibernate.initialize(ac.getUserStory());
+            if (ac.getUserStory() != null) {
+                Hibernate.initialize(ac.getUserStory().getProject());
+                if (ac.getUserStory().getProject() != null) {
+                    Hibernate.initialize(ac.getUserStory().getProject().getWorkspace());
+                }
+            }
+        });
         return opt;
     }
 
