@@ -28,7 +28,9 @@ public class WorkspaceModelAssembler implements RepresentationModelAssembler<Wor
 
         // Compute stats
         response.setProjectCount(projectRepository.countByWorkspace_WorkspaceId(entity.getWorkspaceId()));
-        response.setMemberCount(workspaceMemberRepository.countByWorkspace_WorkspaceId(entity.getWorkspaceId()));
+        long dbMemberCount = workspaceMemberRepository.countByWorkspace_WorkspaceId(entity.getWorkspaceId());
+        // Every workspace has at least 1 member (the owner), even if legacy data is missing
+        response.setMemberCount(Math.max(1, dbMemberCount));
 
         response.add(linkTo(methodOn(WorkspaceController.class).getWorkspaceById(null, entity.getWorkspaceId())).withSelfRel());
         response.add(linkTo(methodOn(WorkspaceController.class).updateWorkspace(null, entity.getWorkspaceId(), null)).withRel("update"));

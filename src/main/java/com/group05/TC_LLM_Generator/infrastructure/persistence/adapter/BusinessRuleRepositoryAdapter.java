@@ -25,17 +25,17 @@ public class BusinessRuleRepositoryAdapter implements BusinessRuleRepositoryPort
 
     @Override
     public Optional<BusinessRule> findById(UUID businessRuleId) {
-        return jpaRepository.findById(businessRuleId);
+        return jpaRepository.findByIdWithStory(businessRuleId);
     }
 
     @Override
     public Page<BusinessRule> findByProjectId(UUID projectId, Pageable pageable) {
-        return jpaRepository.findByProject_ProjectId(projectId, pageable);
+        return jpaRepository.findByProjectIdWithStory(projectId, pageable);
     }
 
     @Override
     public List<BusinessRule> findByUserStoryId(UUID userStoryId) {
-        return jpaRepository.findByUserStory_UserStoryIdOrderByCreatedAtAsc(userStoryId);
+        return jpaRepository.findByUserStoryIdWithStory(userStoryId);
     }
 
     @Override
