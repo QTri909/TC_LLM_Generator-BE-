@@ -1,7 +1,6 @@
 package com.group05.TC_LLM_Generator.application.service;
 
 import com.group05.TC_LLM_Generator.application.port.out.TestCaseRepositoryPort;
-import com.group05.TC_LLM_Generator.domain.model.enums.TestCaseStatus;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestCase;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
@@ -155,17 +154,6 @@ public class TestCaseService {
         Hibernate.initialize(saved.getTestCaseType());
 
         return saved;
-    }
-
-    /**
-     * Update test case status (PENDING/PASSED/FAILED/SKIPPED)
-     */
-    @Transactional
-    public TestCase updateTestCaseStatus(UUID testCaseId, TestCaseStatus status) {
-        TestCase testCase = testCaseRepository.findById(testCaseId)
-                .orElseThrow(() -> new IllegalArgumentException("Test case not found: " + testCaseId));
-        testCase.setStatus(status);
-        return testCaseRepository.save(testCase);
     }
 
     /**

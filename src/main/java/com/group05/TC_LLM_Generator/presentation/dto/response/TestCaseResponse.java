@@ -29,7 +29,6 @@ public class TestCaseResponse extends RepresentationModel<TestCaseResponse> {
     private String steps;
     private String expectedResult;
     private String customFieldsJson;
-    private String status;
     private Boolean generatedByAi;
     private Instant createdAt;
 }

@@ -40,7 +40,6 @@ public interface TestCasePresentationMapper {
     @Mapping(target = "acceptanceCriteria", ignore = true)
     @Mapping(target = "testCaseType", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "status", ignore = true)
     TestCase toEntity(CreateTestCaseRequest request);
 
     /**

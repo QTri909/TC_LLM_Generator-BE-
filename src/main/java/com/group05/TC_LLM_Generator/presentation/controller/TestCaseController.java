@@ -224,39 +224,4 @@ public class TestCaseController {
 
         return ResponseEntity.ok(ApiResponse.success(pagedModel, "Test cases retrieved successfully"));
     }
-
-    /**
-     * Update test case status (PENDING/PASSED/FAILED/SKIPPED)
-     * PATCH /api/v1/test-cases/{id}/status
-     */
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<TestCaseResponse>> updateTestCaseStatus(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable("id") UUID testCaseId,
-            @RequestBody java.util.Map<String, String> body) {
-
-        TestCase testCase = testCaseService.getTestCaseById(testCaseId)
-                .orElseThrow(() -> new ResourceNotFoundException("TestCase", "id", testCaseId));
-
-        // Auth: require project contributor access
-        UserStory userStory = testCase.getUserStory();
-        if (userStory != null) {
-            UUID currentUserId = UUID.fromString(jwt.getSubject());
-            Project project = userStory.getProject();
-            projectAuth.requireProjectAccess(
-                    project.getProjectId(), project.getWorkspace().getWorkspaceId(), currentUserId);
-        }
-
-        String statusStr = body.get("status");
-        com.group05.TC_LLM_Generator.domain.model.enums.TestCaseStatus newStatus;
-        try {
-            newStatus = com.group05.TC_LLM_Generator.domain.model.enums.TestCaseStatus.valueOf(statusStr);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Status must be one of: PENDING, PASSED, FAILED, SKIPPED"));
-        }
-
-        TestCase updated = testCaseService.updateTestCaseStatus(testCaseId, newStatus);
-        return ResponseEntity.ok(ApiResponse.success(assembler.toModel(updated), "Test case status updated"));
-    }
 }
