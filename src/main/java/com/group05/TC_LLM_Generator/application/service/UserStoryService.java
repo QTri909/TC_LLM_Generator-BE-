@@ -269,9 +269,9 @@ public class UserStoryService {
                         throw new IllegalStateException(
                                 "Cannot mark story as READY: at least 1 acceptance criteria is required");
                     }
-                } else if (to != StoryStatus.ARCHIVED) {
+                } else {
                     throw new IllegalStateException(
-                            "Invalid transition: DRAFT → " + to + ". Allowed: READY, ARCHIVED");
+                            "Invalid transition: DRAFT → " + to + ". Allowed: READY");
                 }
             }
             case READY -> {
@@ -283,9 +283,9 @@ public class UserStoryService {
                         throw new IllegalStateException(
                                 "Cannot move to IN_PROGRESS: at least 1 acceptance criteria must have a test case");
                     }
-                } else if (to != StoryStatus.DRAFT && to != StoryStatus.ARCHIVED) {
+                } else if (to != StoryStatus.DRAFT) {
                     throw new IllegalStateException(
-                            "Invalid transition: READY → " + to + ". Allowed: DRAFT, IN_PROGRESS, ARCHIVED");
+                            "Invalid transition: READY → " + to + ". Allowed: DRAFT, IN_PROGRESS");
                 }
             }
             case IN_PROGRESS -> {
@@ -297,21 +297,15 @@ public class UserStoryService {
                         throw new IllegalStateException(
                                 "Cannot mark as DONE: all acceptance criteria must have at least 1 test case");
                     }
-                } else if (to != StoryStatus.READY && to != StoryStatus.ARCHIVED) {
+                } else if (to != StoryStatus.READY) {
                     throw new IllegalStateException(
-                            "Invalid transition: IN_PROGRESS → " + to + ". Allowed: READY, DONE, ARCHIVED");
+                            "Invalid transition: IN_PROGRESS → " + to + ". Allowed: READY, DONE");
                 }
             }
             case DONE -> {
-                if (to != StoryStatus.IN_PROGRESS && to != StoryStatus.ARCHIVED) {
+                if (to != StoryStatus.IN_PROGRESS) {
                     throw new IllegalStateException(
-                            "Invalid transition: DONE → " + to + ". Allowed: IN_PROGRESS, ARCHIVED");
-                }
-            }
-            case ARCHIVED -> {
-                if (to != StoryStatus.DRAFT) {
-                    throw new IllegalStateException(
-                            "Invalid transition: ARCHIVED → " + to + ". Allowed: DRAFT");
+                            "Invalid transition: DONE → " + to + ". Allowed: IN_PROGRESS");
                 }
             }
         }

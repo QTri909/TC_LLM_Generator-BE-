@@ -4,6 +4,5 @@ public enum StoryStatus {
     DRAFT,
     READY,
     IN_PROGRESS,
-    DONE,
-    ARCHIVED
+    DONE
 }
