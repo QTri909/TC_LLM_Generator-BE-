@@ -264,28 +264,9 @@ public class UserStoryService {
     private void validateStatusTransition(StoryStatus from, StoryStatus to, UserStory story) {
         switch (from) {
             case DRAFT -> {
-                if (to == StoryStatus.READY) {
-                    if (story.getAcceptanceCriteria() == null || story.getAcceptanceCriteria().isEmpty()) {
-                        throw new IllegalStateException(
-                                "Cannot mark story as READY: at least 1 acceptance criteria is required");
-                    }
-                } else {
+                if (to != StoryStatus.IN_PROGRESS) {
                     throw new IllegalStateException(
-                            "Invalid transition: DRAFT → " + to + ". Allowed: READY");
-                }
-            }
-            case READY -> {
-                if (to == StoryStatus.IN_PROGRESS) {
-                    // Check if at least 1 AC has a test case
-                    boolean hasAnyTC = story.getAcceptanceCriteria().stream()
-                            .anyMatch(ac -> ac.getTestCases() != null && !ac.getTestCases().isEmpty());
-                    if (!hasAnyTC) {
-                        throw new IllegalStateException(
-                                "Cannot move to IN_PROGRESS: at least 1 acceptance criteria must have a test case");
-                    }
-                } else if (to != StoryStatus.DRAFT) {
-                    throw new IllegalStateException(
-                            "Invalid transition: READY → " + to + ". Allowed: DRAFT, IN_PROGRESS");
+                            "Invalid transition: DRAFT → " + to + ". Allowed: IN_PROGRESS");
                 }
             }
             case IN_PROGRESS -> {
@@ -297,9 +278,9 @@ public class UserStoryService {
                         throw new IllegalStateException(
                                 "Cannot mark as DONE: all acceptance criteria must have at least 1 test case");
                     }
-                } else if (to != StoryStatus.READY) {
+                } else if (to != StoryStatus.DRAFT) {
                     throw new IllegalStateException(
-                            "Invalid transition: IN_PROGRESS → " + to + ". Allowed: READY, DONE");
+                            "Invalid transition: IN_PROGRESS → " + to + ". Allowed: DRAFT, DONE");
                 }
             }
             case DONE -> {
@@ -316,8 +297,13 @@ public class UserStoryService {
      * This is a "soft" transition — it only moves the status when safe to do so,
      * and never throws exceptions.
      *
-     * After TC created:  DRAFT → READY (if story has ≥1 AC)
-     * After TC deleted:  READY/IN_PROGRESS → DRAFT (if 0 test cases remain)
+     * After TC created:
+     *   DRAFT → IN_PROGRESS           (first test case added)
+     *   IN_PROGRESS → DONE            (all ACs now have ≥1 TC)
+     *
+     * After TC deleted:
+     *   DONE → IN_PROGRESS            (no longer all ACs covered)
+     *   IN_PROGRESS → DRAFT           (0 test cases remain)
      */
     @Transactional
     public void tryAutoTransitionAfterTestCaseChange(UUID userStoryId, boolean testCaseCreated) {
@@ -329,49 +315,43 @@ public class UserStoryService {
             Hibernate.initialize(story.getProject());
 
             StoryStatus current = story.getStatus();
+            StoryStatus newStatus = current;
 
-            if (testCaseCreated) {
-                // After TC created: auto DRAFT → READY if has ACs
-                if (current == StoryStatus.DRAFT) {
-                    List<AcceptanceCriteria> acs = story.getAcceptanceCriteria();
-                    if (acs != null && !acs.isEmpty()) {
-                        story.setStatus(StoryStatus.READY);
-                        userStoryRepository.save(story);
+            // Compute test case coverage
+            List<AcceptanceCriteria> acs = story.getAcceptanceCriteria();
+            boolean hasAnyTC = false;
+            boolean allACCovered = true;
 
-                        eventPublisher.publishEvent(new EntityChangedEvent(
-                                this, EntityType.STORY, Action.UPDATED,
-                                story.getUserStoryId().toString(),
-                                story.getProject().getProjectId().toString(),
-                                null, "system"
-                        ));
-                    }
+            if (acs != null && !acs.isEmpty()) {
+                for (AcceptanceCriteria ac : acs) {
+                    Hibernate.initialize(ac.getTestCases());
+                    boolean acHasTC = ac.getTestCases() != null && !ac.getTestCases().isEmpty();
+                    if (acHasTC) hasAnyTC = true;
+                    if (!acHasTC) allACCovered = false;
                 }
             } else {
-                // After TC deleted: check if story still has any test cases
-                if (current == StoryStatus.READY || current == StoryStatus.IN_PROGRESS) {
-                    boolean hasAnyTC = false;
-                    List<AcceptanceCriteria> acs = story.getAcceptanceCriteria();
-                    if (acs != null) {
-                        hasAnyTC = acs.stream()
-                                .anyMatch(ac -> {
-                                    Hibernate.initialize(ac.getTestCases());
-                                    return ac.getTestCases() != null && !ac.getTestCases().isEmpty();
-                                });
-                    }
+                allACCovered = false;
+            }
 
-                    if (!hasAnyTC) {
-                        // No test cases left → downgrade to DRAFT
-                        story.setStatus(StoryStatus.DRAFT);
-                        userStoryRepository.save(story);
+            // Determine new status based on coverage
+            if (!hasAnyTC) {
+                newStatus = StoryStatus.DRAFT;
+            } else if (allACCovered) {
+                newStatus = StoryStatus.DONE;
+            } else {
+                newStatus = StoryStatus.IN_PROGRESS;
+            }
 
-                        eventPublisher.publishEvent(new EntityChangedEvent(
-                                this, EntityType.STORY, Action.UPDATED,
-                                story.getUserStoryId().toString(),
-                                story.getProject().getProjectId().toString(),
-                                null, "system"
-                        ));
-                    }
-                }
+            if (newStatus != current) {
+                story.setStatus(newStatus);
+                userStoryRepository.save(story);
+
+                eventPublisher.publishEvent(new EntityChangedEvent(
+                        this, EntityType.STORY, Action.UPDATED,
+                        story.getUserStoryId().toString(),
+                        story.getProject().getProjectId().toString(),
+                        null, "system"
+                ));
             }
         } catch (Exception e) {
             // Silent — auto-transition should never break the main operation
