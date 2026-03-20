@@ -20,11 +20,11 @@ public class ReportService {
     private final UserStoryRepositoryPort userStoryRepository;
 
     /**
-     * Get test case type distribution (by TestCaseType name).
+     * Get test case type distribution for a specific project.
      */
-    public Map<String, Long> getTestCaseTypeDistribution() {
-        List<TestCase> allCases = testCaseRepository.findAll();
-        return allCases.stream()
+    public Map<String, Long> getTestCaseTypeDistribution(UUID projectId) {
+        List<TestCase> cases = testCaseRepository.findByProjectId(projectId);
+        return cases.stream()
                 .collect(Collectors.groupingBy(
                         tc -> tc.getTestCaseType() != null ? tc.getTestCaseType().getName() : "Uncategorized",
                         Collectors.counting()
@@ -32,12 +32,12 @@ public class ReportService {
     }
 
     /**
-     * Get AI vs Manual generation breakdown.
+     * Get AI vs Manual generation breakdown for a specific project.
      */
-    public Map<String, Long> getAiVsManualDistribution() {
-        List<TestCase> allCases = testCaseRepository.findAll();
-        long aiGenerated = allCases.stream().filter(tc -> Boolean.TRUE.equals(tc.getGeneratedByAi())).count();
-        long manual = allCases.size() - aiGenerated;
+    public Map<String, Long> getAiVsManualDistribution(UUID projectId) {
+        List<TestCase> cases = testCaseRepository.findByProjectId(projectId);
+        long aiGenerated = cases.stream().filter(tc -> Boolean.TRUE.equals(tc.getGeneratedByAi())).count();
+        long manual = cases.size() - aiGenerated;
 
         Map<String, Long> result = new LinkedHashMap<>();
         if (aiGenerated > 0) result.put("AI Generated", aiGenerated);
@@ -46,11 +46,11 @@ public class ReportService {
     }
 
     /**
-     * Get user story status distribution.
+     * Get user story status distribution for a specific project.
      */
-    public Map<String, Long> getStoryStatusDistribution() {
-        List<UserStory> allStories = userStoryRepository.findAll();
-        return allStories.stream()
+    public Map<String, Long> getStoryStatusDistribution(UUID projectId) {
+        List<UserStory> stories = userStoryRepository.findByProjectId(projectId);
+        return stories.stream()
                 .collect(Collectors.groupingBy(
                         s -> s.getStatus() != null ? s.getStatus().name() : "UNKNOWN",
                         Collectors.counting()
@@ -58,19 +58,19 @@ public class ReportService {
     }
 
     /**
-     * Get requirement coverage: stories with test cases vs stories without.
+     * Get requirement coverage for a specific project.
      */
-    public Map<String, Object> getRequirementCoverage() {
-        List<UserStory> allStories = userStoryRepository.findAll();
-        List<TestCase> allCases = testCaseRepository.findAll();
+    public Map<String, Object> getRequirementCoverage(UUID projectId) {
+        List<UserStory> stories = userStoryRepository.findByProjectId(projectId);
+        List<TestCase> cases = testCaseRepository.findByProjectId(projectId);
 
-        Set<UUID> coveredStoryIds = allCases.stream()
+        Set<UUID> coveredStoryIds = cases.stream()
                 .filter(tc -> tc.getUserStory() != null)
                 .map(tc -> tc.getUserStory().getUserStoryId())
                 .collect(Collectors.toSet());
 
-        long totalStories = allStories.size();
-        long covered = allStories.stream()
+        long totalStories = stories.size();
+        long covered = stories.stream()
                 .filter(s -> coveredStoryIds.contains(s.getUserStoryId()))
                 .count();
 
@@ -83,14 +83,14 @@ public class ReportService {
     }
 
     /**
-     * Aggregate all report data.
+     * Aggregate all report data for a specific project.
      */
-    public Map<String, Object> getFullReport() {
+    public Map<String, Object> getFullReport(UUID projectId) {
         Map<String, Object> report = new LinkedHashMap<>();
-        report.put("testCaseTypeDistribution", getTestCaseTypeDistribution());
-        report.put("aiVsManualDistribution", getAiVsManualDistribution());
-        report.put("storyStatusDistribution", getStoryStatusDistribution());
-        report.put("requirementCoverage", getRequirementCoverage());
+        report.put("testCaseTypeDistribution", getTestCaseTypeDistribution(projectId));
+        report.put("aiVsManualDistribution", getAiVsManualDistribution(projectId));
+        report.put("storyStatusDistribution", getStoryStatusDistribution(projectId));
+        report.put("requirementCoverage", getRequirementCoverage(projectId));
         return report;
     }
 }

@@ -1,5 +1,6 @@
 package com.group05.TC_LLM_Generator.infrastructure.persistence.entity;
 
+import com.group05.TC_LLM_Generator.domain.model.enums.TestCaseStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -57,6 +58,11 @@ public class TestCase {
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     private String customFieldsJson = "{}";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private TestCaseStatus status = TestCaseStatus.PENDING;
 
     @Column(name = "generated_by_ai", nullable = false)
     @Builder.Default

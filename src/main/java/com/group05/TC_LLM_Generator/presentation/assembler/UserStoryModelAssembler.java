@@ -30,7 +30,7 @@ public class UserStoryModelAssembler implements RepresentationModelAssembler<Use
         response.add(linkTo(methodOn(UserStoryController.class).updateUserStory(entity.getUserStoryId(), null, null)).withRel("update"));
         response.add(linkTo(methodOn(UserStoryController.class).deleteUserStory(entity.getUserStoryId(), null)).withRel("delete"));
         response.add(linkTo(methodOn(UserStoryController.class).getAllUserStories(null)).withRel("userStories"));
-        response.add(linkTo(methodOn(AcceptanceCriteriaController.class).getAcceptanceCriteriaByUserStory(entity.getUserStoryId())).withRel("acceptanceCriteria"));
+        response.add(linkTo(methodOn(AcceptanceCriteriaController.class).getByUserStory(null, entity.getUserStoryId())).withRel("acceptanceCriteria"));
 
         return response;
     }

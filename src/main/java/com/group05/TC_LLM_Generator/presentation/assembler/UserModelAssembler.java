@@ -27,7 +27,7 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
 
         // Add HATEOAS links
         response.add(linkTo(methodOn(UserController.class).getUserById(entity.getUserId())).withSelfRel());
-        response.add(linkTo(methodOn(UserController.class).updateUser(entity.getUserId(), null)).withRel("update"));
+        response.add(linkTo(methodOn(UserController.class).updateUser(null, entity.getUserId(), null)).withRel("update"));
         response.add(linkTo(methodOn(UserController.class).deleteUser(entity.getUserId())).withRel("delete"));
         response.add(linkTo(methodOn(UserController.class).getAllUsers(null, null)).withRel("users"));
 

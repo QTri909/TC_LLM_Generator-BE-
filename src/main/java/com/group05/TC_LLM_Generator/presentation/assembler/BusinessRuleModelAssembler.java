@@ -35,7 +35,7 @@ public class BusinessRuleModelAssembler implements RepresentationModelAssembler<
 
         // HATEOAS self link
         response.add(linkTo(methodOn(BusinessRuleController.class)
-                .getBusinessRule(entity.getProject().getProjectId(), entity.getBusinessRuleId()))
+                .getBusinessRule(null, entity.getProject().getProjectId(), entity.getBusinessRuleId()))
                 .withSelfRel());
 
         return response;

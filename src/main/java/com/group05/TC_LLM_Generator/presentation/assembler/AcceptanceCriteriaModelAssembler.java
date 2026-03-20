@@ -26,13 +26,13 @@ public class AcceptanceCriteriaModelAssembler implements RepresentationModelAsse
         AcceptanceCriteriaResponse response = mapper.toResponse(entity);
 
         response.add(linkTo(methodOn(AcceptanceCriteriaController.class)
-                .getAcceptanceCriteriaById(entity.getAcceptanceCriteriaId())).withSelfRel());
+                .getById(entity.getAcceptanceCriteriaId())).withSelfRel());
         response.add(linkTo(methodOn(AcceptanceCriteriaController.class)
-                .updateAcceptanceCriteria(entity.getAcceptanceCriteriaId(), null)).withRel("update"));
+                .update(null, entity.getAcceptanceCriteriaId(), null)).withRel("update"));
         response.add(linkTo(methodOn(AcceptanceCriteriaController.class)
-                .deleteAcceptanceCriteria(entity.getAcceptanceCriteriaId())).withRel("delete"));
+                .delete(null, entity.getAcceptanceCriteriaId())).withRel("delete"));
         response.add(linkTo(methodOn(AcceptanceCriteriaController.class)
-                .getAcceptanceCriteriaByUserStory(entity.getUserStory().getUserStoryId())).withRel("acceptanceCriteria"));
+                .getByUserStory(null, entity.getUserStory().getUserStoryId())).withRel("acceptanceCriteria"));
 
         return response;
     }

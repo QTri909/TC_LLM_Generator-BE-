@@ -1,149 +1,181 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.AcceptanceCriteriaService;
+import com.group05.TC_LLM_Generator.application.service.ProjectAccessChecker;
 import com.group05.TC_LLM_Generator.application.service.UserStoryService;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.AcceptanceCriteria;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserStory;
-import com.group05.TC_LLM_Generator.presentation.assembler.AcceptanceCriteriaModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
 import com.group05.TC_LLM_Generator.presentation.dto.request.CreateAcceptanceCriteriaRequest;
-import com.group05.TC_LLM_Generator.presentation.dto.request.UpdateAcceptanceCriteriaRequest;
 import com.group05.TC_LLM_Generator.presentation.dto.response.AcceptanceCriteriaResponse;
 import com.group05.TC_LLM_Generator.presentation.exception.ResourceNotFoundException;
-import com.group05.TC_LLM_Generator.presentation.mapper.AcceptanceCriteriaPresentationMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
-/**
- * REST Controller for AcceptanceCriteria CRUD operations.
- * Nested resource under user stories + individual CRUD.
- */
 @RestController
-@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class AcceptanceCriteriaController {
 
-    private final AcceptanceCriteriaService acceptanceCriteriaService;
+    private final AcceptanceCriteriaService acService;
     private final UserStoryService userStoryService;
-    private final AcceptanceCriteriaPresentationMapper mapper;
-    private final AcceptanceCriteriaModelAssembler assembler;
+    private final ProjectAccessChecker accessChecker;
 
     /**
-     * Get acceptance criteria by user story ID (ordered by orderNo)
+     * Get acceptance criteria by user story ID
      * GET /api/v1/user-stories/{storyId}/acceptance-criteria
      */
-    @GetMapping("/user-stories/{storyId}/acceptance-criteria")
-    public ResponseEntity<ApiResponse<CollectionModel<AcceptanceCriteriaResponse>>> getAcceptanceCriteriaByUserStory(
-            @PathVariable("storyId") UUID storyId) {
+    @GetMapping("/api/v1/user-stories/{storyId}/acceptance-criteria")
+    public ResponseEntity<ApiResponse<List<AcceptanceCriteriaResponse>>> getByUserStory(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storyId) {
 
-        if (!userStoryService.userStoryExists(storyId)) {
-            throw new ResourceNotFoundException("UserStory", "id", storyId);
-        }
+        UUID userId = UUID.fromString(jwt.getSubject());
+        UserStory story = userStoryService.getUserStoryById(storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", storyId));
+        accessChecker.requireProjectMember(story.getProject().getProjectId(), userId);
 
-        List<AcceptanceCriteria> criteria = acceptanceCriteriaService.getByUserStoryIdOrdered(storyId);
-        CollectionModel<AcceptanceCriteriaResponse> collectionModel = assembler.toCollectionModel(criteria);
-
-        return ResponseEntity.ok(ApiResponse.success(collectionModel, "Acceptance criteria retrieved successfully"));
+        List<AcceptanceCriteria> criteria = acService.getByUserStoryId(storyId);
+        return ResponseEntity.ok(ApiResponse.success(toResponseList(criteria)));
     }
 
     /**
-     * Create acceptance criteria for a user story
+     * Create a single acceptance criteria
      * POST /api/v1/user-stories/{storyId}/acceptance-criteria
      */
-    @PostMapping("/user-stories/{storyId}/acceptance-criteria")
-    public ResponseEntity<ApiResponse<AcceptanceCriteriaResponse>> createAcceptanceCriteria(
-            @PathVariable("storyId") UUID storyId,
+    @PostMapping("/api/v1/user-stories/{storyId}/acceptance-criteria")
+    public ResponseEntity<ApiResponse<AcceptanceCriteriaResponse>> create(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storyId,
             @Valid @RequestBody CreateAcceptanceCriteriaRequest request) {
 
-        UserStory userStory = userStoryService.getUserStoryById(storyId)
+        UUID userId = UUID.fromString(jwt.getSubject());
+        UserStory story = userStoryService.getUserStoryById(storyId)
                 .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", storyId));
+        accessChecker.requireContributor(story.getProject().getProjectId(), userId);
 
-        AcceptanceCriteria entity = mapper.toEntity(request);
-        entity.setUserStory(userStory);
-        AcceptanceCriteria saved = acceptanceCriteriaService.createAcceptanceCriteria(entity);
-        AcceptanceCriteriaResponse response = assembler.toModel(saved);
+        AcceptanceCriteria ac = AcceptanceCriteria.builder()
+                .userStory(story)
+                .content(request.getContent())
+                .orderNo(0)
+                .completed(false)
+                .build();
+        AcceptanceCriteria created = acService.createAcceptanceCriteria(ac);
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Acceptance criteria created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(toResponse(created), "Acceptance criteria created"));
     }
 
     /**
-     * Batch create acceptance criteria for a user story
+     * Batch create acceptance criteria
      * POST /api/v1/user-stories/{storyId}/acceptance-criteria/batch
      */
-    @PostMapping("/user-stories/{storyId}/acceptance-criteria/batch")
-    public ResponseEntity<ApiResponse<CollectionModel<AcceptanceCriteriaResponse>>> batchCreateAcceptanceCriteria(
-            @PathVariable("storyId") UUID storyId,
-            @Valid @RequestBody List<CreateAcceptanceCriteriaRequest> requests) {
+    @PostMapping("/api/v1/user-stories/{storyId}/acceptance-criteria/batch")
+    public ResponseEntity<ApiResponse<List<AcceptanceCriteriaResponse>>> batchCreate(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID storyId,
+            @RequestBody List<CreateAcceptanceCriteriaRequest> requests) {
 
-        UserStory userStory = userStoryService.getUserStoryById(storyId)
+        UUID userId = UUID.fromString(jwt.getSubject());
+        UserStory story = userStoryService.getUserStoryById(storyId)
                 .orElseThrow(() -> new ResourceNotFoundException("UserStory", "id", storyId));
+        accessChecker.requireContributor(story.getProject().getProjectId(), userId);
 
-        List<AcceptanceCriteria> entities = mapper.toEntityList(requests);
-        entities.forEach(entity -> entity.setUserStory(userStory));
-        List<AcceptanceCriteria> savedList = acceptanceCriteriaService.saveAll(entities);
-        CollectionModel<AcceptanceCriteriaResponse> collectionModel = assembler.toCollectionModel(savedList);
+        AtomicInteger order = new AtomicInteger(0);
+        List<AcceptanceCriteria> entities = requests.stream()
+                .map(r -> AcceptanceCriteria.builder()
+                        .userStory(story)
+                        .content(r.getContent())
+                        .orderNo(order.getAndIncrement())
+                        .completed(false)
+                        .build())
+                .collect(Collectors.toList());
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(collectionModel, "Acceptance criteria batch created successfully"));
+        List<AcceptanceCriteria> saved = acService.saveAll(entities);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(toResponseList(saved), "Acceptance criteria created"));
     }
 
     /**
-     * Get acceptance criteria by ID
+     * Get single acceptance criteria by ID
      * GET /api/v1/acceptance-criteria/{id}
      */
-    @GetMapping("/acceptance-criteria/{id}")
-    public ResponseEntity<ApiResponse<AcceptanceCriteriaResponse>> getAcceptanceCriteriaById(
-            @PathVariable("id") UUID id) {
+    @GetMapping("/api/v1/acceptance-criteria/{id}")
+    public ResponseEntity<ApiResponse<AcceptanceCriteriaResponse>> getById(
+            @PathVariable UUID id) {
 
-        AcceptanceCriteria criteria = acceptanceCriteriaService.getAcceptanceCriteriaById(id)
+        AcceptanceCriteria ac = acService.getAcceptanceCriteriaById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("AcceptanceCriteria", "id", id));
 
-        AcceptanceCriteriaResponse response = assembler.toModel(criteria);
-
-        return ResponseEntity.ok(ApiResponse.success(response, "Acceptance criteria retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success(toResponse(ac)));
     }
 
     /**
-     * Update acceptance criteria by ID
+     * Update acceptance criteria
      * PUT /api/v1/acceptance-criteria/{id}
      */
-    @PutMapping("/acceptance-criteria/{id}")
-    public ResponseEntity<ApiResponse<AcceptanceCriteriaResponse>> updateAcceptanceCriteria(
-            @PathVariable("id") UUID id,
-            @Valid @RequestBody UpdateAcceptanceCriteriaRequest request) {
+    @PutMapping("/api/v1/acceptance-criteria/{id}")
+    public ResponseEntity<ApiResponse<AcceptanceCriteriaResponse>> update(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateAcceptanceCriteriaRequest request) {
 
-        AcceptanceCriteria existing = acceptanceCriteriaService.getAcceptanceCriteriaById(id)
+        UUID userId = UUID.fromString(jwt.getSubject());
+        AcceptanceCriteria existing = acService.getAcceptanceCriteriaWithUserStory(id)
                 .orElseThrow(() -> new ResourceNotFoundException("AcceptanceCriteria", "id", id));
+        accessChecker.requireContributor(
+                existing.getUserStory().getProject().getProjectId(), userId);
 
-        mapper.updateEntity(request, existing);
-        AcceptanceCriteria updated = acceptanceCriteriaService.updateAcceptanceCriteria(id, existing);
-        AcceptanceCriteriaResponse response = assembler.toModel(updated);
+        AcceptanceCriteria updateData = AcceptanceCriteria.builder()
+                .content(request.getContent())
+                .build();
+        AcceptanceCriteria updated = acService.updateAcceptanceCriteria(id, updateData);
 
-        return ResponseEntity.ok(ApiResponse.success(response, "Acceptance criteria updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(toResponse(updated), "Acceptance criteria updated"));
     }
 
     /**
-     * Delete acceptance criteria by ID
+     * Delete acceptance criteria
      * DELETE /api/v1/acceptance-criteria/{id}
      */
-    @DeleteMapping("/acceptance-criteria/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteAcceptanceCriteria(@PathVariable("id") UUID id) {
-        if (!acceptanceCriteriaService.existsById(id)) {
-            throw new ResourceNotFoundException("AcceptanceCriteria", "id", id);
-        }
+    @DeleteMapping("/api/v1/acceptance-criteria/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id) {
 
-        acceptanceCriteriaService.deleteAcceptanceCriteria(id);
+        UUID userId = UUID.fromString(jwt.getSubject());
+        AcceptanceCriteria existing = acService.getAcceptanceCriteriaWithUserStory(id)
+                .orElseThrow(() -> new ResourceNotFoundException("AcceptanceCriteria", "id", id));
+        accessChecker.requireContributor(
+                existing.getUserStory().getProject().getProjectId(), userId);
 
-        return ResponseEntity.ok(ApiResponse.success("Acceptance criteria deleted successfully"));
+        acService.deleteAcceptanceCriteria(id);
+
+        return ResponseEntity.ok(ApiResponse.success("Acceptance criteria deleted"));
+    }
+
+    // ── Mapping helpers ──
+
+    private AcceptanceCriteriaResponse toResponse(AcceptanceCriteria ac) {
+        return AcceptanceCriteriaResponse.builder()
+                .acceptanceCriteriaId(ac.getAcceptanceCriteriaId())
+                .userStoryId(ac.getUserStory().getUserStoryId())
+                .content(ac.getContent())
+                .createdAt(ac.getCreatedAt())
+                .build();
+    }
+
+    private List<AcceptanceCriteriaResponse> toResponseList(List<AcceptanceCriteria> list) {
+        return list.stream().map(this::toResponse).collect(Collectors.toList());
     }
 }

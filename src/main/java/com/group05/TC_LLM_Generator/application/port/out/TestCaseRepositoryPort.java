@@ -48,6 +48,8 @@ public interface TestCaseRepositoryPort {
 
     long count();
 
+    List<TestCase> findByProjectId(UUID projectId);
+
     long countByProjectId(UUID projectId);
 
     long countByProjectIdAndGeneratedByAi(UUID projectId, boolean generatedByAi);

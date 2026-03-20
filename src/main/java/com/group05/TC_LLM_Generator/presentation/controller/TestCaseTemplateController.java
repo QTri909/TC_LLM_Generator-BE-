@@ -1,5 +1,6 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
+import com.group05.TC_LLM_Generator.application.service.ProjectAccessChecker;
 import com.group05.TC_LLM_Generator.application.service.TestCaseTemplateService;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TemplateField;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.TestCaseTemplate;
@@ -11,6 +12,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,10 +27,15 @@ import java.util.stream.Collectors;
 public class TestCaseTemplateController {
 
     private final TestCaseTemplateService templateService;
+    private final ProjectAccessChecker accessChecker;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TestCaseTemplateResponse>>> getTemplates(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireProjectMember(projectId, userId);
 
         List<TestCaseTemplate> templates = templateService.getByProject(projectId);
         List<TestCaseTemplateResponse> responses = templates.stream()
@@ -39,8 +47,12 @@ public class TestCaseTemplateController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseTemplateResponse>> getTemplate(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireProjectMember(projectId, userId);
 
         TestCaseTemplate template = templateService.getById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TestCaseTemplate", "id", id));
@@ -51,8 +63,12 @@ public class TestCaseTemplateController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<TestCaseTemplateResponse>> createTemplate(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateTestCaseTemplateRequest request) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireContributor(projectId, userId);
 
         TestCaseTemplate created = templateService.createTemplate(
                 projectId, request.getName(), request.getDescription(), request.getIsDefault());
@@ -77,9 +93,13 @@ public class TestCaseTemplateController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<TestCaseTemplateResponse>> updateTemplate(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id,
             @RequestBody Map<String, Object> request) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireContributor(projectId, userId);
 
         String name = (String) request.get("name");
         String description = (String) request.get("description");
@@ -93,9 +113,13 @@ public class TestCaseTemplateController {
 
     @PutMapping("/{id}/fields")
     public ResponseEntity<ApiResponse<List<TestCaseTemplateResponse.TemplateFieldResponse>>> replaceFields(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id,
             @Valid @RequestBody List<CreateTestCaseTemplateRequest.FieldInput> fieldInputs) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireContributor(projectId, userId);
 
         List<TemplateField> fields = fieldInputs.stream()
                 .map(f -> TemplateField.builder()
@@ -116,8 +140,12 @@ public class TestCaseTemplateController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTemplate(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireLead(projectId, userId);
 
         try {
             templateService.deleteTemplate(id);

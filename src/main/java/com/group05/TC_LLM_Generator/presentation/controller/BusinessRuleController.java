@@ -1,6 +1,7 @@
 package com.group05.TC_LLM_Generator.presentation.controller;
 
 import com.group05.TC_LLM_Generator.application.service.BusinessRuleService;
+import com.group05.TC_LLM_Generator.application.service.ProjectAccessChecker;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.BusinessRule;
 import com.group05.TC_LLM_Generator.presentation.assembler.BusinessRuleModelAssembler;
 import com.group05.TC_LLM_Generator.presentation.dto.common.ApiResponse;
@@ -16,6 +17,8 @@ import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +32,7 @@ public class BusinessRuleController {
     private final BusinessRuleService businessRuleService;
     private final BusinessRuleModelAssembler assembler;
     private final PagedResourcesAssembler<BusinessRule> pagedResourcesAssembler;
+    private final ProjectAccessChecker accessChecker;
 
     /**
      * List business rules for a project (paginated)
@@ -36,8 +40,12 @@ public class BusinessRuleController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedModel<BusinessRuleResponse>>> getBusinessRules(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             Pageable pageable) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireProjectMember(projectId, userId);
 
         Page<BusinessRule> page = businessRuleService.getByProject(projectId, pageable);
         PagedModel<BusinessRuleResponse> pagedModel = pagedResourcesAssembler.toModel(page, assembler);
@@ -51,8 +59,12 @@ public class BusinessRuleController {
      */
     @GetMapping(params = "storyId")
     public ResponseEntity<ApiResponse<List<BusinessRuleResponse>>> getBusinessRulesByStory(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @RequestParam UUID storyId) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireProjectMember(projectId, userId);
 
         List<BusinessRule> rules = businessRuleService.getByUserStory(storyId);
         List<BusinessRuleResponse> responses = rules.stream()
@@ -68,8 +80,12 @@ public class BusinessRuleController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<BusinessRuleResponse>> getBusinessRule(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireProjectMember(projectId, userId);
 
         BusinessRule rule = businessRuleService.getById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("BusinessRule", "id", id));
@@ -83,8 +99,12 @@ public class BusinessRuleController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<BusinessRuleResponse>> createBusinessRule(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @Valid @RequestBody CreateBusinessRuleRequest request) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireContributor(projectId, userId);
 
         BusinessRule created = businessRuleService.createBusinessRule(
                 projectId,
@@ -106,9 +126,13 @@ public class BusinessRuleController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<BusinessRuleResponse>> updateBusinessRule(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id,
             @Valid @RequestBody UpdateBusinessRuleRequest request) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireContributor(projectId, userId);
 
         BusinessRule updated = businessRuleService.updateBusinessRule(
                 id,
@@ -128,8 +152,12 @@ public class BusinessRuleController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteBusinessRule(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID projectId,
             @PathVariable UUID id) {
+
+        UUID userId = UUID.fromString(jwt.getSubject());
+        accessChecker.requireLead(projectId, userId);
 
         businessRuleService.deleteBusinessRule(id);
         return ResponseEntity.ok(ApiResponse.success("Business rule deleted successfully"));

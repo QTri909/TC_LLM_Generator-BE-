@@ -42,6 +42,9 @@ public interface TestCaseRepository extends JpaRepository<TestCase, UUID> {
 
     Page<TestCase> findByTitleContainingIgnoreCase(String title, Pageable pageable);
 
+    @Query("SELECT tc FROM TestCase tc WHERE tc.userStory.project.projectId = :projectId")
+    List<TestCase> findByProjectId(@Param("projectId") UUID projectId);
+
     @Query("SELECT COUNT(tc) FROM TestCase tc WHERE tc.userStory.project.projectId = :projectId")
     long countByProjectId(@Param("projectId") UUID projectId);
 

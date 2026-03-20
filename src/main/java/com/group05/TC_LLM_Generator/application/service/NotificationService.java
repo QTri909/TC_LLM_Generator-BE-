@@ -12,6 +12,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Service
@@ -68,21 +70,23 @@ public class NotificationService {
     }
 
     /**
-     * Get paginated notifications for a user.
+     * Get paginated notifications for a user (last 7 days only).
      */
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getNotifications(UUID userId, Pageable pageable) {
+        Instant sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS);
         return notificationRepository
-                .findByRecipientUserIdOrderByCreatedAtDesc(userId, pageable)
+                .findByRecipientUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, sevenDaysAgo, pageable)
                 .map(this::toResponse);
     }
 
     /**
-     * Get unread notification count.
+     * Get unread notification count (last 7 days only).
      */
     @Transactional(readOnly = true)
     public long getUnreadCount(UUID userId) {
-        return notificationRepository.countByRecipientUserIdAndIsReadFalse(userId);
+        Instant sevenDaysAgo = Instant.now().minus(7, ChronoUnit.DAYS);
+        return notificationRepository.countByRecipientUserIdAndIsReadFalseAndCreatedAtAfter(userId, sevenDaysAgo);
     }
 
     /**

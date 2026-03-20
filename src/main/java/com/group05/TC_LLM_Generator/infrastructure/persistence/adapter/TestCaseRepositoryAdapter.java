@@ -107,6 +107,11 @@ public class TestCaseRepositoryAdapter implements TestCaseRepositoryPort {
     }
 
     @Override
+    public List<TestCase> findByProjectId(UUID projectId) {
+        return jpaRepository.findByProjectId(projectId);
+    }
+
+    @Override
     public long countByProjectId(UUID projectId) {
         return jpaRepository.countByProjectId(projectId);
     }

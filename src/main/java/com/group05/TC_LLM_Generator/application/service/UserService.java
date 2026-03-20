@@ -1,6 +1,7 @@
 package com.group05.TC_LLM_Generator.application.service;
 
 import com.group05.TC_LLM_Generator.application.port.out.UserRepositoryPort;
+import com.group05.TC_LLM_Generator.domain.model.enums.Role;
 import com.group05.TC_LLM_Generator.infrastructure.persistence.entity.UserEntity;
 import com.group05.TC_LLM_Generator.presentation.dto.response.UserStatsResponse;
 import lombok.RequiredArgsConstructor;
@@ -136,6 +137,28 @@ public class UserService {
         }
 
         return userRepository.save(existingUser);
+    }
+
+    /**
+     * Change user status (ACTIVE ↔ SUSPENDED) — admin action
+     */
+    @Transactional
+    public UserEntity changeUserStatus(UUID userId, String newStatus) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setStatus(newStatus);
+        return userRepository.save(user);
+    }
+
+    /**
+     * Change user role (USER ↔ ADMIN) — admin action
+     */
+    @Transactional
+    public UserEntity changeUserRole(UUID userId, Role newRole) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setRole(newRole);
+        return userRepository.save(user);
     }
 
     /**
