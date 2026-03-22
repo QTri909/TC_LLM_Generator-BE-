@@ -10,7 +10,8 @@ import com.group05.TC_LLM_Generator.application.port.out.authen.dto.info.GoogleU
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class VerifierAdapter implements VerifyTokenPort {
@@ -18,12 +19,21 @@ public class VerifierAdapter implements VerifyTokenPort {
     @Value("${google.client-id}")
     private String googleClientId;
 
+    @Value("${google.mobile-client-id:}")
+    private String googleMobileClientId;
+
     @Override
     public GoogleUserInfo execute(String idTokenString) {
         try {
+            List<String> allowedAudiences = new ArrayList<>();
+            allowedAudiences.add(googleClientId);
+            if (googleMobileClientId != null && !googleMobileClientId.isBlank()) {
+                allowedAudiences.add(googleMobileClientId);
+            }
+
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(),
                     new GsonFactory())
-                    .setAudience(Collections.singletonList(googleClientId))
+                    .setAudience(allowedAudiences)
                     .build();
 
             GoogleIdToken idToken = verifier.verify(idTokenString);
