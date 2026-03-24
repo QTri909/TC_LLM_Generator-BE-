@@ -31,7 +31,7 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data_vol:/data
     networks:
@@ -63,7 +63,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
     ports:
       # Public API port only — management port 8081 is intentionally NOT exposed
-      - "8080:8080"
+      - "8088:8080"
     depends_on:
       redis:
         condition: service_healthy
@@ -102,7 +102,7 @@ services:
       - --storage.path=/var/lib/alloy/data
     ports:
       # Alloy UI — useful for debugging pipeline health: http://localhost:12345
-      - "12345:12345"
+      - "12346:12345"
       # OTLP HTTP receiver — Spring Boot sends traces here (internal only)
       # Not exposed to host; app reaches it via Docker network
     networks:
