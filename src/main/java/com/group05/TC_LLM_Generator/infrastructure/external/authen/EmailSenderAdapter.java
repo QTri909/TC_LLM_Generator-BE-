@@ -28,7 +28,7 @@ public class EmailSenderAdapter implements EmailSenderPort {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromAddress);
+            helper.setFrom(fromAddress, "QuraEx");
             helper.setTo(toEmail);
             helper.setSubject("Verify your QA Artifacts account");
             helper.setText(buildEmailHtml(fullName, verificationUrl), true);
@@ -113,7 +113,7 @@ public class EmailSenderAdapter implements EmailSenderPort {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromAddress);
+            helper.setFrom(fromAddress, "QuraEx");
             helper.setTo(toEmail);
             helper.setSubject("You're invited to join " + workspaceName + " on QA Artifacts");
             helper.setText(buildInvitationEmailHtml(inviterName, workspaceName, acceptUrl), true);
@@ -194,7 +194,7 @@ public class EmailSenderAdapter implements EmailSenderPort {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromAddress);
+            helper.setFrom(fromAddress, "QuraEx");
             helper.setTo(toEmail);
             helper.setSubject("Reset your QA Artifacts password");
             helper.setText(buildPasswordResetEmailHtml(fullName, resetUrl), true);
