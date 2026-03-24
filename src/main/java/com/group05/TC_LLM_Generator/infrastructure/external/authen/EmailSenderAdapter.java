@@ -3,6 +3,7 @@ package com.group05.TC_LLM_Generator.infrastructure.external.authen;
 import com.group05.TC_LLM_Generator.application.port.out.authen.EmailSenderPort;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import java.io.UnsupportedEncodingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +36,7 @@ public class EmailSenderAdapter implements EmailSenderPort {
 
             mailSender.send(message);
             log.info("Verification email sent to {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (MessagingException | UnsupportedEncodingException e) {
             log.error("Failed to send verification email to {}", toEmail, e);
             throw new RuntimeException("Failed to send verification email", e);
         }
@@ -120,7 +121,7 @@ public class EmailSenderAdapter implements EmailSenderPort {
 
             mailSender.send(message);
             log.info("Invitation email sent to {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (MessagingException | UnsupportedEncodingException e) {
             log.error("Failed to send invitation email to {}", toEmail, e);
             throw new RuntimeException("Failed to send invitation email", e);
         }
@@ -201,7 +202,7 @@ public class EmailSenderAdapter implements EmailSenderPort {
 
             mailSender.send(message);
             log.info("Password reset email sent to {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (MessagingException | UnsupportedEncodingException e) {
             log.error("Failed to send password reset email to {}", toEmail, e);
             throw new RuntimeException("Failed to send password reset email", e);
         }
