@@ -20,6 +20,10 @@ jobs:
           docker compose down
           docker compose up -d --build
 
+      - name: Fix permissions
+        run: |
+          sudo chown -R github-runner:github-runner /var/www/TC_LLM_Generator-BE
+
       - name: Health check
         run: |
           sleep 15
